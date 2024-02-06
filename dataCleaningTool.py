@@ -25,7 +25,7 @@ def process_file(input_file, delimiter, default_value="NA"):
         # Cleaning operations
         for col in df.select_dtypes(include=['object']).columns:
             # Remove characters that are not letters, numbers, periods, commas, or spaces
-            df[col] = df[col].str.replace('[^a-zA-Z0-9.,| ]', '', regex=True)
+            df[col] = df[col].str.replace('[^a-zA-Z0-9., ]', '', regex=True)
 
             # Remove trailing spaces without affecting spaces within words
             df[col] = df[col].str.rstrip()
@@ -54,10 +54,10 @@ def space_removal_analysis(original_df, cleaned_df):
     return space_removal_counts
 
 # Streamlit UI setup
-st.title("Deutsche Glasfaser CSV File Cleaner Tool ")
+st.title("CSV File Cleaner and Analyzer")
 
 input_file = st.file_uploader("Upload your CSV file:", type="csv")
-delimiter = st.text_input("Enter the delimiter used in your CSV file:", ";")
+delimiter = st.text_input("Enter the delimiter used in your CSV file:", ",")
 default_value = st.text_input("Default value for missing data:", "NA")
 
 if st.button("Clean and Analyze"):
@@ -89,6 +89,13 @@ if st.button("Clean and Analyze"):
             
             st.write("### Space Removal Analysis")
             st.write(f"Number of Spaces Removed: {space_removal_counts}")
+
+            # Save the cleaned data to a CSV file
+            cleaned_filename = "cleaned_data.csv"
+            cleaned_df.to_csv(cleaned_filename, index=False)
             
+            # Provide a download link for the cleaned data
+            st.write("### Download Cleaned Data")
+            st.markdown(f"Download the cleaned data as [cleaned_data.csv](sandbox:/mnt/data/{cleaned_filename})")
     else:
         st.error("Please upload a CSV file and specify the delimiter.")
