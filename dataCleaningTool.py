@@ -54,10 +54,10 @@ def space_removal_analysis(original_df, cleaned_df):
     return space_removal_counts
 
 # Streamlit UI setup
-st.title("CSV File Cleaner and Analyzer")
+st.title("Deutsche Glasfaser Data Cleaning Tool")
 
 input_file = st.file_uploader("Upload your CSV file:", type="csv")
-delimiter = st.text_input("Enter the delimiter used in your CSV file:", ",")
+delimiter = st.text_input("Enter the delimiter used in your CSV file:", ";")
 default_value = st.text_input("Default value for missing data:", "NA")
 
 if st.button("Clean and Analyze"):
