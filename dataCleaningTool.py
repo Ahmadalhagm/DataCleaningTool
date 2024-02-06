@@ -54,7 +54,7 @@ def space_removal_analysis(original_df, cleaned_df):
     return space_removal_counts
 
 # Streamlit UI setup
-st.title("CSV File Cleaner and Analyzer")
+st.title("Deutsche Glasfaser CSV File Cleaner Tool ")
 
 input_file = st.file_uploader("Upload your CSV file:", type="csv")
 delimiter = st.text_input("Enter the delimiter used in your CSV file:", ";")
