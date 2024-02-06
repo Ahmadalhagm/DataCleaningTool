@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import chardet
 import io
+import os
 
 def detect_encoding(file_content):
     result = chardet.detect(file_content)
@@ -90,12 +91,14 @@ if st.button("Clean and Analyze"):
             st.write("### Space Removal Analysis")
             st.write(f"Number of Spaces Removed: {space_removal_counts}")
 
-            # Save the cleaned data to a CSV file
-            cleaned_filename = "cleaned_data.csv"
-            cleaned_df.to_csv(cleaned_filename, index=False)
-            
-            # Provide a download link for the cleaned data
-            st.write("### Download Cleaned Data")
-            st.markdown(f"Download the cleaned data as [cleaned_data.csv](sandbox:/mnt/data/{cleaned_filename})")
+            # Export the cleaned data to a custom file path and name
+            export_path = st.text_input("Enter export path and filename (e.g., /path/to/export.csv):")
+            if st.button("Export Cleaned Data"):
+                if export_path:
+                    cleaned_df.to_csv(export_path, index=False)
+                    st.success(f"Cleaned data exported to {export_path}")
+                else:
+                    st.error("Please enter a valid export path and filename.")
+
     else:
         st.error("Please upload a CSV file and specify the delimiter.")
