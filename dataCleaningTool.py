@@ -40,7 +40,7 @@ def process_file(input_file, delimiter, default_value="NA"):
 
         return original_df, df, space_removal_counts  # Return both the original and cleaned DataFrame
     except Exception as e:
-        st.error(f"Es ist ein Fehler aufgetreten: {e}")
+        st.error(f"An error occurred: {e}")
         return None, None, None
 
 def character_replacement_analysis(original_df, cleaned_df):
@@ -51,43 +51,42 @@ def character_replacement_analysis(original_df, cleaned_df):
     return replaced_chars, char_replacement_counts
 
 # Streamlit UI setup
-st.title("CSV-Datei bereinigen und analysieren")
+st.title("CSV File Cleaner and Analyzer")
 
-input_file = st.file_uploader("Laden Sie Ihre CSV-Datei hoch:", type="csv")
-delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer CSV-Datei ein:", ",")
-default_value = st.text_input("Standardwert für fehlende Daten:", "NA")
+input_file = st.file_uploader("Upload your CSV file:", type="csv")
+delimiter = st.text_input("Enter the delimiter used in your CSV file:", ",")
+default_value = st.text_input("Default value for missing data:", "NA")
 
 if input_file and delimiter:
     original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, default_value)
     
     if original_df is not None and cleaned_df is not None:
-        st.write("### Originaldaten Vorschau")
+        st.write("### Original Data Preview")
         st.dataframe(original_df.head())
 
-        st.write("### Bereinigte Daten Vorschau")
+        st.write("### Cleaned Data Preview")
         st.dataframe(cleaned_df.head())
 
-        st.write("### Bereinigungszusammenfassung")
-        st.write(f"Ursprüngliche Zeilen: {len(original_df)}, Bereinigte Zeilen: {len(cleaned_df)}")
+        st.write("### Cleaning Summary")
+        st.write(f"Original Rows: {len(original_df)}, Cleaned Rows: {len(cleaned_df)}")
 
         # Analysis of character replacements
         replaced_chars, char_replacement_counts = character_replacement_analysis(original_df, cleaned_df)
         
-        st.write("### Analyse der Zeichenersetzung")
-        st.write(f"Anzahl der ersetzen Zeichen: {char_replacement_counts}")
+        st.write("### Character Replacement Analysis")
+        st.write(f"Number of Characters Replaced: {char_replacement_counts}")
         
         if char_replacement_counts > 0:
-            st.write("Ersetzte Zeichen:")
+            st.write("Replaced Characters:")
             st.dataframe(replaced_chars.head())
 
         # Analysis of space removal
-        st.write("### Analyse der Leerzeichenentfernung")
-        st.write(f"Anzahl der entfernten Leerzeichen: {space_removal_counts}")
+        st.write("### Space Removal Analysis")
+        st.write(f"Number of Spaces Removed: {space_removal_counts}")
 
         # Download link for cleaned data
         cleaned_csv = cleaned_df.to_csv(index=False)
-        file_name = st.text_input("Geben Sie den Namen der heruntergeladenen Datei ein:", "bereinigte_daten.csv")
-        st.file_download(cleaned_csv, file_name=file_name, label="Bereinigte Daten herunterladen")
+        st.download_button(label="Download Cleaned Data", data=cleaned_csv, file_name="cleaned_data.csv", mime="text/csv")
 
 else:
-    st.error("Bitte laden Sie eine CSV-Datei hoch und geben Sie das Trennzeichen an.")
+    st.error("Please upload a CSV file and specify the delimiter.")
