@@ -13,48 +13,60 @@ def process_file(input_file, delimiter, default_value="NA"):
     encoding = detect_encoding(content)
 
     try:
-        # Laden der Originaldaten
-        original_df = pd.read_csv(io.StringIO(content.decode(encoding)),
-                                  sep=delimiter,
-                                  encoding=encoding)
+        # Load the original data
+        if input_file.name.endswith('.csv'):
+            original_df = pd.read_csv(io.StringIO(content.decode(encoding)),
+                                      sep=delimiter,
+                                      encoding=encoding)
+        elif input_file.name.endswith('.txt'):
+            original_df = pd.read_csv(io.StringIO(content.decode(encoding)),
+                                      sep=delimiter,
+                                      encoding=encoding,
+                                      header=None)
+        else:
+            st.error("Nur .csv- und .txt-Dateien werden unterstützt.")
+            return None, None, None
 
-        # Erstellen einer Kopie des DataFrames für die Bereinigung, um die Originaldaten zu erhalten
+        # Create a copy of the DataFrame for cleaning to preserve the original data
         df = original_df.copy()
 
-        # Bereinigungsoperationen
+        # Cleaning operations
         space_removal_counts = 0
         for col in df.select_dtypes(include=['object']).columns:
-            # Entfernen von Zeichen, die keine Buchstaben, Zahlen, Punkte, Kommas oder Leerzeichen sind
+            # Replace ';' with ' and ' within each value
+            df[col] = df[col].str.replace(';', ' and ')
+
+            # Remove characters that are not letters, numbers, periods, commas, or spaces
             df[col] = df[col].str.replace('[^a-zA-Z0-9., ]', '', regex=True)
 
-            # Entfernen von Leerzeichen am Ende jedes Werts, ohne Leerzeichen innerhalb von Wörtern zu beeinflussen
+            # Remove trailing spaces without affecting spaces within words
             df[col] = df[col].str.rstrip()
 
-            # Entfernen von Pipe-Zeichen am Ende jedes Werts
+            # Remove trailing pipe characters
             df[col] = df[col].str.rstrip('|')
 
-            # Zählen der entfernten Leerzeichen am Ende jedes Werts
+            # Count spaces removed from the end of each value
             space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
 
         df.fillna(default_value, inplace=True)
 
-        return original_df, df, space_removal_counts  # Rückgabe sowohl des Original- als auch des bereinigten DataFrames
+        return original_df, df, space_removal_counts  # Return both the original and cleaned DataFrame
     except Exception as e:
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None
 
 def character_replacement_analysis(original_df, cleaned_df):
-    # Analyse der Zeichenersetzungen
+    # Analysis of character replacements
     replaced_chars = original_df.select_dtypes(include=['object']).replace(cleaned_df)
     char_replacement_counts = (original_df != cleaned_df).sum().sum()
 
     return replaced_chars, char_replacement_counts
 
-# Streamlit UI-Setup
-st.title("DG Dateinbereiniger")
+# Streamlit UI setup
+st.title("CSV- und TXT-Datei bereinigen und analysieren")
 
-input_file = st.file_uploader("Laden Sie Ihre CSV-Datei hoch:", type="csv")
-delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer CSV-Datei ein:", ";")
+input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
+delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
 default_value = st.text_input("Standardwert für fehlende Daten:", "NA")
 
 if input_file and delimiter:
@@ -89,4 +101,4 @@ if input_file and delimiter:
         st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv, file_name="bereinigte_daten.csv", mime="text/csv")
 
 else:
-    st.error("Bitte laden Sie eine CSV-Datei hoch und geben Sie das Trennzeichen an.")
+    st.error("Bitte laden Sie eine CSV- oder TXT-Datei hoch und geben Sie das Trennzeichen an.")
