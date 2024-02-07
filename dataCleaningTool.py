@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import chardet
 import io
-import os
 
 def detect_encoding(file_content):
     result = chardet.detect(file_content)
@@ -54,9 +53,6 @@ def character_replacement_analysis(original_df, cleaned_df):
 # Streamlit UI setup
 st.title("CSV File Cleaner and Analyzer")
 
-# Export file selector
-export_filepath = st.text_input("Enter export file path:", value="output.csv")
-
 input_file = st.file_uploader("Upload your CSV file:", type="csv")
 delimiter = st.text_input("Enter the delimiter used in your CSV file:", ",")
 default_value = st.text_input("Default value for missing data:", "NA")
@@ -88,13 +84,9 @@ if input_file and delimiter:
         st.write("### Space Removal Analysis")
         st.write(f"Number of Spaces Removed: {space_removal_counts}")
 
-        # Export the cleaned data
-        if st.button("Export Cleaned Data"):
-            try:
-                cleaned_df.to_csv(export_filepath, index=False)
-                st.success(f"Cleaned data exported to {export_filepath}")
-            except Exception as e:
-                st.error(f"An error occurred while exporting: {e}")
+        # Download link for cleaned data
+        cleaned_csv = cleaned_df.to_csv(index=False)
+        st.download_button(label="Download Cleaned Data", data=cleaned_csv, file_name="cleaned_data.csv", mime="text/csv")
 
 else:
     st.error("Please upload a CSV file and specify the delimiter.")
