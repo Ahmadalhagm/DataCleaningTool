@@ -27,6 +27,20 @@ def process_file(input_file, delimiter, default_value="NA"):
             st.error("Nur .csv- und .txt-Dateien werden unterstützt.")
             return None, None, None
 
+        # Check for unnamed columns at the end
+        unnamed_columns = [col for col in original_df.columns if 'Unnamed:' in col]
+        if unnamed_columns:
+            # Check if the columns before and after the unnamed columns contain email values
+            for col in unnamed_columns:
+                idx = original_df.columns.get_loc(col)
+                before_col = original_df.columns[idx - 1]
+                after_col = original_df.columns[idx + 1]
+                
+                # Merge email addresses from before and after columns
+                if original_df[before_col].str.contains('@').all() and original_df[after_col].str.contains('@').all():
+                    original_df[before_col] = original_df[before_col].astype(str) + ', ' + original_df[after_col].astype(str)
+                    original_df.drop(columns=[col, after_col], inplace=True)
+
         # Create a copy of the DataFrame for cleaning to preserve the original data
         df = original_df.copy()
 
@@ -37,7 +51,7 @@ def process_file(input_file, delimiter, default_value="NA"):
             df[col] = df[col].str.replace(f'{delimiter}\s*', f'{delimiter}', regex=True)
 
             # Remove characters that are not letters, numbers, periods, commas, or spaces
-            df[col] = df[col].str.replace('[^a-zA-Z0-9.,; ]', '', regex=True)
+            df[col] = df[col].str.replace('[^a-zA-Z0-9.,;@ ]', '', regex=True)
 
             # Remove trailing spaces without affecting spaces within words
             df[col] = df[col].str.rstrip()
@@ -63,7 +77,7 @@ def character_replacement_analysis(original_df, cleaned_df):
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
 
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
-delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ",")
+delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
 default_value = st.text_input("Standardwert für fehlende Daten:", "NA")
 
 if input_file and delimiter:
