@@ -52,46 +52,47 @@ def character_replacement_analysis(original_df, cleaned_df):
     return replaced_chars, char_replacement_counts
 
 # Streamlit UI setup
-st.title("Deutsche Glasfaser File Cleaner")
+st.title("CSV File Cleaner and Analyzer")
+
+# Export file input
+export_filepath = st.text_input("Enter the filename for the exported CSV (including .csv extension):", value="cleaned_data.csv")
 
 input_file = st.file_uploader("Upload your CSV file:", type="csv")
-delimiter = st.text_input("Enter the delimiter used in your CSV file:", ";")
+delimiter = st.text_input("Enter the delimiter used in your CSV file:", ",")
 default_value = st.text_input("Default value for missing data:", "NA")
 
-if st.button("Clean and Analyze"):
-    if input_file and delimiter:
-        original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, default_value)
+if input_file and delimiter:
+    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, default_value)
+    
+    if original_df is not None and cleaned_df is not None:
+        st.write("### Original Data Preview")
+        st.dataframe(original_df.head())
+
+        st.write("### Cleaned Data Preview")
+        st.dataframe(cleaned_df.head())
+
+        st.write("### Cleaning Summary")
+        st.write(f"Original Rows: {len(original_df)}, Cleaned Rows: {len(cleaned_df)}")
+
+        # Analysis of character replacements
+        replaced_chars, char_replacement_counts = character_replacement_analysis(original_df, cleaned_df)
         
-        if original_df is not None and cleaned_df is not None:
-            st.write("### Original Data Preview")
-            st.dataframe(original_df.head())
+        st.write("### Character Replacement Analysis")
+        st.write(f"Number of Characters Replaced: {char_replacement_counts}")
+        
+        if char_replacement_counts > 0:
+            st.write("Replaced Characters:")
+            st.dataframe(replaced_chars.head())
 
-            st.write("### Cleaned Data Preview")
-            st.dataframe(cleaned_df.head())
+        # Analysis of space removal
+        st.write("### Space Removal Analysis")
+        st.write(f"Number of Spaces Removed: {space_removal_counts}")
 
-            st.write("### Cleaning Summary")
-            st.write(f"Original Rows: {len(original_df)}, Cleaned Rows: {len(cleaned_df)}")
+        # Export the cleaned data
+        if st.button("Export Cleaned Data"):
+            if export_filepath:
+                cleaned_df.to_csv(export_filepath, index=False)
+                st.success(f"Cleaned data exported to {export_filepath}")
 
-            # Analysis of character replacements
-            replaced_chars, char_replacement_counts = character_replacement_analysis(original_df, cleaned_df)
-            
-            st.write("### Character Replacement Analysis")
-            st.write(f"Number of Characters Replaced: {char_replacement_counts}")
-            
-            if char_replacement_counts > 0:
-                st.write("Replaced Characters:")
-                st.dataframe(replaced_chars.head())
-
-            # Analysis of space removal
-            st.write("### Space Removal Analysis")
-            st.write(f"Number of Spaces Removed: {space_removal_counts}")
-
-            # Export the cleaned data
-            if st.button("Export Cleaned Data"):
-                export_filepath = st.file_uploader("Choose export location:", type="csv", accept_multiple_files=False)
-                if export_filepath:
-                    cleaned_df.to_csv(export_filepath.name, index=False)
-                    st.success(f"Cleaned data exported to {export_filepath.name}")
-
-    else:
-        st.error("Please upload a CSV file and specify the delimiter.")
+else:
+    st.error("Please upload a CSV file and specify the delimiter.")
