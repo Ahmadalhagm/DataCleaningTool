@@ -30,23 +30,16 @@ def process_file(input_file, delimiter, default_value="NA"):
         # Check for unnamed columns at the end
         unnamed_columns = [col for col in original_df.columns if 'Unnamed:' in col]
         if unnamed_columns:
-            # Check if there are enough columns to check for email values before and after the unnamed columns
             for col in unnamed_columns:
+                # Get the index of the unnamed column
                 idx = original_df.columns.get_loc(col)
-                if idx >= 1 and idx < len(original_df.columns) - 1:
-                    before_col = original_df.columns[idx - 1]
-                    after_col = original_df.columns[idx + 1]
-                    
-                    # Check if there are at least three columns before and after the unnamed column
-                    if idx >= 2 and idx < len(original_df.columns) - 2:
-                        if original_df[before_col].str.contains('@').all() and original_df[after_col].str.contains('@').all():
-                            # Merge email addresses from before and after columns
-                            original_df[before_col] = original_df[before_col].astype(str) + ', ' + original_df[after_col].astype(str)
-                            original_df.drop(columns=[col, after_col], inplace=True)
-                        else:
-                            st.warning("Es wurden keine E-Mail-Adressen in den Spalten gefunden.")
-                    else:
-                        st.warning("Nicht genügend Spalten vorhanden, um E-Mail-Adressen zu überprüfen.")
+
+                # Check if the next column exists and contains an email
+                if idx + 1 < len(original_df.columns) and original_df.iloc[:, idx + 1].str.contains('@').all():
+                    # Merge email addresses from the unnamed column and the next column
+                    original_df.iloc[:, idx + 1] = original_df.iloc[:, idx].astype(str) + ', ' + original_df.iloc[:, idx + 1].astype(str)
+                    # Drop the unnamed column
+                    original_df.drop(columns=[col], inplace=True)
 
         # Create a copy of the DataFrame for cleaning to preserve the original data
         df = original_df.copy()
