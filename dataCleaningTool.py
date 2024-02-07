@@ -33,20 +33,14 @@ def process_file(input_file, delimiter, default_value="NA"):
         # Cleaning operations
         space_removal_counts = 0
         for col in df.select_dtypes(include=['object']).columns:
-            # Replace ';' with ' and ' within each value
-            df[col] = df[col].str.replace(';', ' and ')
-
             # Merge values separated by ';'
-            df[col] = df[col].str.replace(';', '')
+            df[col] = df[col].str.replace(f'{delimiter}\s*', f'{delimiter}', regex=True)
 
             # Remove characters that are not letters, numbers, periods, commas, or spaces
-            df[col] = df[col].str.replace('[^a-zA-Z0-9.,@ ]', '', regex=True)
+            df[col] = df[col].str.replace('[^a-zA-Z0-9.,; ]', '', regex=True)
 
             # Remove trailing spaces without affecting spaces within words
             df[col] = df[col].str.rstrip()
-
-            # Remove trailing pipe characters
-            df[col] = df[col].str.rstrip('|')
 
             # Count spaces removed from the end of each value
             space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
@@ -69,7 +63,7 @@ def character_replacement_analysis(original_df, cleaned_df):
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
 
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
-delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
+delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ",")
 default_value = st.text_input("Standardwert für fehlende Daten:", "NA")
 
 if input_file and delimiter:
