@@ -17,13 +17,13 @@ def process_file(input_file, delimiter, default_value="NA"):
         # Load the original data
         original_df = pd.read_csv(io.StringIO(content.decode(encoding)),
                                   sep=delimiter,
-                                  encoding=encoding,
-                                  on_bad_lines='skip')
+                                  encoding=encoding)
 
         # Create a copy of the DataFrame for cleaning to preserve the original data
         df = original_df.copy()
 
         # Cleaning operations
+        space_removal_counts = 0
         for col in df.select_dtypes(include=['object']).columns:
             # Remove characters that are not letters, numbers, periods, commas, or spaces
             df[col] = df[col].str.replace('[^a-zA-Z0-9., ]', '', regex=True)
@@ -34,12 +34,15 @@ def process_file(input_file, delimiter, default_value="NA"):
             # Remove trailing pipe characters
             df[col] = df[col].str.rstrip('|')
 
+            # Count spaces removed from the end of each value
+            space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
+
         df.fillna(default_value, inplace=True)
 
-        return original_df, df  # Return both the original and cleaned DataFrame
+        return original_df, df, space_removal_counts  # Return both the original and cleaned DataFrame
     except Exception as e:
         st.error(f"An error occurred: {e}")
-        return None, None
+        return None, None, None
 
 def character_replacement_analysis(original_df, cleaned_df):
     # Analysis of character replacements
@@ -48,14 +51,8 @@ def character_replacement_analysis(original_df, cleaned_df):
 
     return replaced_chars, char_replacement_counts
 
-def space_removal_analysis(original_df, cleaned_df):
-    # Analysis of space removal
-    space_removal_counts = ((original_df != cleaned_df) & (original_df == " ")).sum().sum()
-    
-    return space_removal_counts
-
 # Streamlit UI setup
-st.title("Deutsche Glasfaser Data Cleaning Tool")
+st.title("Deutsche Glasfaser File Cleaner")
 
 input_file = st.file_uploader("Upload your CSV file:", type="csv")
 delimiter = st.text_input("Enter the delimiter used in your CSV file:", ";")
@@ -63,7 +60,7 @@ default_value = st.text_input("Default value for missing data:", "NA")
 
 if st.button("Clean and Analyze"):
     if input_file and delimiter:
-        original_df, cleaned_df = process_file(input_file, delimiter, default_value)
+        original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, default_value)
         
         if original_df is not None and cleaned_df is not None:
             st.write("### Original Data Preview")
@@ -86,19 +83,15 @@ if st.button("Clean and Analyze"):
                 st.dataframe(replaced_chars.head())
 
             # Analysis of space removal
-            space_removal_counts = space_removal_analysis(original_df, cleaned_df)
-            
             st.write("### Space Removal Analysis")
             st.write(f"Number of Spaces Removed: {space_removal_counts}")
 
-            # Export the cleaned data to a custom file path and name
-            export_path = st.text_input("Enter export path and filename (e.g., /path/to/export.csv):")
+            # Export the cleaned data
             if st.button("Export Cleaned Data"):
-                if export_path:
-                    cleaned_df.to_csv(export_path, index=False)
-                    st.success(f"Cleaned data exported to {export_path}")
-                else:
-                    st.error("Please enter a valid export path and filename.")
+                export_filepath = st.file_uploader("Choose export location:", type="csv", accept_multiple_files=False)
+                if export_filepath:
+                    cleaned_df.to_csv(export_filepath.name, index=False)
+                    st.success(f"Cleaned data exported to {export_filepath.name}")
 
     else:
         st.error("Please upload a CSV file and specify the delimiter.")
