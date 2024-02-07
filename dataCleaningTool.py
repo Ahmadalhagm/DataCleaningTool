@@ -36,8 +36,11 @@ def process_file(input_file, delimiter, default_value="NA"):
             # Replace ';' with ' and ' within each value
             df[col] = df[col].str.replace(';', ' and ')
 
+            # Merge values separated by ';'
+            df[col] = df[col].str.replace(';', '')
+
             # Remove characters that are not letters, numbers, periods, commas, or spaces
-            df[col] = df[col].str.replace('[^a-zA-Z0-9., ]', '', regex=True)
+            df[col] = df[col].str.replace('[^a-zA-Z0-9.,@ ]', '', regex=True)
 
             # Remove trailing spaces without affecting spaces within words
             df[col] = df[col].str.rstrip()
