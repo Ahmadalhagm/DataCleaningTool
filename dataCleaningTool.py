@@ -51,10 +51,10 @@ def character_replacement_analysis(original_df, cleaned_df):
     return replaced_chars, char_replacement_counts
 
 # Streamlit UI-Setup
-st.title("CSV-Datei bereinigen und analysieren")
+st.title("DG Dateinbereiniger")
 
 input_file = st.file_uploader("Laden Sie Ihre CSV-Datei hoch:", type="csv")
-delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer CSV-Datei ein:", ",")
+delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer CSV-Datei ein:", ";")
 default_value = st.text_input("Standardwert für fehlende Daten:", "NA")
 
 if input_file and delimiter:
