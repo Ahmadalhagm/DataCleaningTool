@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import chardet
 import io
-import os
 
 def detect_encoding(file_content):
     result = chardet.detect(file_content)
@@ -54,8 +53,8 @@ def character_replacement_analysis(original_df, cleaned_df):
 # Streamlit UI setup
 st.title("CSV File Cleaner and Analyzer")
 
-# Export file input
-export_filepath = st.text_input("Enter the filename for the exported CSV (including .csv extension):", value="cleaned_data.csv")
+# Export file selector
+export_filepath = st.text_input("Enter export file path:", value="output.csv")
 
 input_file = st.file_uploader("Upload your CSV file:", type="csv")
 delimiter = st.text_input("Enter the delimiter used in your CSV file:", ",")
@@ -90,9 +89,8 @@ if input_file and delimiter:
 
         # Export the cleaned data
         if st.button("Export Cleaned Data"):
-            if export_filepath:
-                cleaned_df.to_csv(export_filepath, index=False)
-                st.success(f"Cleaned data exported to {export_filepath}")
+            cleaned_df.to_csv(export_filepath, index=False)
+            st.success(f"Cleaned data exported to {export_filepath}")
 
 else:
     st.error("Please upload a CSV file and specify the delimiter.")
