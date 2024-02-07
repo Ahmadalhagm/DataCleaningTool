@@ -89,8 +89,11 @@ if input_file and delimiter:
 
         # Export the cleaned data
         if st.button("Export Cleaned Data"):
-            cleaned_df.to_csv(export_filepath, index=False)
-            st.success(f"Cleaned data exported to {export_filepath}")
+            try:
+                cleaned_df.to_csv(export_filepath, index=False)
+                st.success(f"Cleaned data exported to {export_filepath}")
+            except Exception as e:
+                st.error(f"An error occurred while exporting: {e}")
 
 else:
     st.error("Please upload a CSV file and specify the delimiter.")
