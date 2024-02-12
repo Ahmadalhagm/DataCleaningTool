@@ -9,7 +9,7 @@ def detect_encoding(file_content):
     encoding = result['encoding']
     return encoding
 
-def process_file(input_file, delimiter, ibahn_column, name_column, address_column, default_value="NA"):
+def process_file(input_file, delimiter, remove_spaces_columns, default_value="NA"):
     content = input_file.getvalue()
     encoding = detect_encoding(content)
 
@@ -47,17 +47,10 @@ def process_file(input_file, delimiter, ibahn_column, name_column, address_colum
             # Count spaces removed from the end of each value
             space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
 
-            # Apply IBAN cleaning if the column is selected as IBAN column
-            if col == ibahn_column:
-                df[col] = df[col].apply(remove_spaces_from_ibahn)  # Remove spaces from IBAN
-
-            # Replace ';' with space in the name column
-            if col == name_column:
-                df[col] = df[col].str.replace(";", " ")
-
-            # Remove spaces from values containing both numbers and letters if it's the address column
-            if col == address_column:
-                df[col] = df[col].apply(remove_spaces_from_mixed)
+        # Remove spaces from selected columns
+        for col in remove_spaces_columns:
+            if col in df.columns:
+                df[col] = df[col].str.replace(' ', '')
 
         df.fillna(default_value, inplace=True)
 
@@ -65,19 +58,6 @@ def process_file(input_file, delimiter, ibahn_column, name_column, address_colum
     except Exception as e:
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None
-
-def remove_spaces_from_ibahn(value):
-    if isinstance(value, str):
-        return value.replace(" ", "")
-    return value
-
-def remove_spaces_from_mixed(value):
-    if isinstance(value, str):
-        if re.match(r'^\s*\w+\s*\d+\s*\w+\s*$', value):
-            return value.replace(" ", "")
-        else:
-            return value
-    return value
 
 # Streamlit UI setup
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
@@ -89,19 +69,10 @@ default_value = st.text_input("Standardwert für fehlende Daten:", "NA")
 if input_file and delimiter:
     original_df = pd.read_csv(input_file, sep=delimiter)
 
-    # Select IBAN column
-    ibahn_column = st.selectbox("Wählen Sie die IBAN-Spalte aus:", original_df.columns)
-    st.write(f"Sie haben '{ibahn_column}' als IBAN-Spalte ausgewählt.")
+    # Select columns to remove spaces
+    remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", original_df.columns)
 
-    # Select Name column
-    name_column = st.selectbox("Wählen Sie die Name-Spalte aus:", original_df.columns)
-    st.write(f"Sie haben '{name_column}' als Name-Spalte ausgewählt.")
-
-    # Select Address column
-    address_column = st.selectbox("Wählen Sie die Adresse-Spalte aus:", original_df.columns)
-    st.write(f"Sie haben '{address_column}' als Adresse-Spalte ausgewählt.")
-
-    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, ibahn_column, name_column, address_column, default_value)
+    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, remove_spaces_columns, default_value)
     
     if original_df is not None and cleaned_df is not None:
         st.write("### Originaldaten Vorschau")
