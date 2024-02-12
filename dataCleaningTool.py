@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import chardet
 import io
+import re
 
 def detect_encoding(file_content):
     result = chardet.detect(file_content)
@@ -46,18 +47,22 @@ def process_file(input_file, delimiter, default_value="NA"):
 
         # Cleaning operations
         space_removal_counts = 0
-        for col in df.select_dtypes(include=['object']).columns:
-            # Merge values separated by ';'
-            df[col] = df[col].str.replace(f'{delimiter}\s*', f'{delimiter}', regex=True)
+        for col in df.columns:
+            if df[col].dtype == 'object':  # Ensure the column is of type 'object' (string)
+                # Merge values separated by ';'
+                df[col] = df[col].str.replace(f'{delimiter}\s*', f'{delimiter}', regex=True)
 
-            # Remove characters that are not letters, numbers, periods, commas, or spaces
-            df[col] = df[col].str.replace('[^a-zA-Z0-9.,;@ ]', '', regex=True)
+                # Remove characters that are not letters, numbers, periods, commas, or spaces
+                df[col] = df[col].str.replace('[^a-zA-Z0-9.,;@ ]', '', regex=True)
 
-            # Remove trailing spaces without affecting spaces within words
-            df[col] = df[col].str.rstrip()
+                # Remove trailing spaces without affecting spaces within words
+                df[col] = df[col].str.rstrip()
 
-            # Count spaces removed from the end of each value
-            space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
+                # Remove spaces from values containing both numbers and letters
+                df[col] = df[col].apply(remove_spaces)
+
+                # Count spaces removed from the end of each value
+                space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
 
         df.fillna(default_value, inplace=True)
 
@@ -65,6 +70,11 @@ def process_file(input_file, delimiter, default_value="NA"):
     except Exception as e:
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None
+
+def remove_spaces(value):
+    if isinstance(value, str) and re.match(r'^\s*\w+\s*\d+\s*\w+\s*$', value):
+        return value.replace(" ", "")
+    return value
 
 def character_replacement_analysis(original_df, cleaned_df):
     # Analysis of character replacements
