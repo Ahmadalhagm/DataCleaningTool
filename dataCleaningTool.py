@@ -67,9 +67,13 @@ def process_file(input_file, delimiter, default_value="NA"):
         return None, None, None
 
 def remove_spaces(value):
-    if isinstance(value, str) and re.match(r'^\s*\w+\s*\d+\s*\w+\s*$', value):
-        return value.replace(" ", "")
-    return value
+    if isinstance(value, str):
+        if re.match(r'^\s*\w+\s*\d+\s*\w+\s*$', value):
+            return value.replace(" ", "")
+        else:
+            return value
+    else:
+        return value
 
 def character_replacement_analysis(original_df, cleaned_df):
     # Analysis of character replacements
