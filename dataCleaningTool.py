@@ -23,6 +23,9 @@ def process_file(input_file, delimiter, default_value="NA"):
             st.error("Nur .csv- und .txt-Dateien werden unterstützt.")
             return None, None, None
 
+        # Check for empty columns and drop them
+        original_df = original_df.dropna(axis=1, how='all')
+
         # Check for unnamed columns at the end
         unnamed_columns = [col for col in original_df.columns if 'Unnamed:' in col]
         if unnamed_columns:
