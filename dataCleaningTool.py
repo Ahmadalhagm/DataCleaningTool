@@ -37,27 +37,29 @@ def process_file(input_file, delimiter, default_value="NA"):
                     # Drop the unnamed column
                     original_df.drop(columns=[col], inplace=True)
 
+        # Convert all columns to string type
+        original_df = original_df.astype(str)
+
         # Create a copy of the DataFrame for cleaning to preserve the original data
         df = original_df.copy()
 
         # Cleaning operations
         space_removal_counts = 0
         for col in df.columns:
-            if df[col].dtype == 'object':  # Ensure the column is of type 'object' (string)
-                # Merge values separated by ';'
-                df[col] = df[col].astype(str).str.replace(f'{delimiter}\s*', f'{delimiter}', regex=True)
+            # Merge values separated by ';'
+            df[col] = df[col].str.replace(f'{delimiter}\s*', f'{delimiter}', regex=True)
 
-                # Remove characters that are not letters, numbers, periods, commas, or spaces
-                df[col] = df[col].str.replace('[^a-zA-Z0-9.,;@ ]', '', regex=True)
+            # Remove characters that are not letters, numbers, periods, commas, or spaces
+            df[col] = df[col].str.replace('[^a-zA-Z0-9.,;@ ]', '', regex=True)
 
-                # Remove trailing spaces without affecting spaces within words
-                df[col] = df[col].str.rstrip()
+            # Remove trailing spaces without affecting spaces within words
+            df[col] = df[col].str.rstrip()
 
-                # Remove spaces from values containing both numbers and letters
-                df[col] = df[col].apply(remove_spaces)
+            # Remove spaces from values containing both numbers and letters
+            df[col] = df[col].apply(remove_spaces)
 
-                # Count spaces removed from the end of each value
-                space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
+            # Count spaces removed from the end of each value
+            space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
 
         df.fillna(default_value, inplace=True)
 
