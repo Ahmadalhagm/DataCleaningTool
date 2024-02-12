@@ -3,24 +3,12 @@ import pandas as pd
 import chardet
 import io
 import re
+import os
 
 def detect_encoding(file_content):
     result = chardet.detect(file_content)
     encoding = result['encoding']
     return encoding
-
-def remove_foreign_characters(value):
-    if isinstance(value, str):
-        return re.sub(r'[^\w.,;@ -]', '', value)
-    return value
-
-def replace_am_and_remove_zeros(value):
-    if isinstance(value, str):
-        value = re.sub(r'\b(\d+):00 AM\b', r'\1 A', value)
-        value = re.sub(r'AM\b', 'A', value)
-        value = re.sub(r'\b0{2}', '', value)  # Remove two zeros
-        return value
-    return value
 
 def process_file(input_file, delimiter, remove_spaces_columns, default_value="NA"):
     content = input_file.getvalue()
@@ -35,9 +23,6 @@ def process_file(input_file, delimiter, remove_spaces_columns, default_value="NA
         else:
             st.error("Nur .csv- und .txt-Dateien werden unterstützt.")
             return None, None, None
-
-        # Replace NaN values with empty strings
-        original_df.fillna('', inplace=True)
 
         # Check for empty columns and drop them
         original_df = original_df.dropna(axis=1, how='all')
@@ -69,6 +54,21 @@ def process_file(input_file, delimiter, remove_spaces_columns, default_value="NA
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None
 
+def remove_foreign_characters(value):
+    if isinstance(value, str):
+        # Remove foreign characters except spaces and German umlauts
+        return re.sub(r'[^\w\s.,;@\-_äöüÄÖÜß]+', '', value)
+    return value
+
+def replace_am_and_remove_zeros(value):
+    if isinstance(value, str):
+        # Replace "AM" with "A"
+        value = value.replace("AM", "A")
+        # Remove two zeros if found
+        value = re.sub(r'(\d+)00(?=\s*A$)', r'\1', value)
+        return value.strip()  # Remove leading and trailing whitespaces
+    return value
+
 # Streamlit UI setup
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
 
@@ -77,35 +77,39 @@ delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
 default_value = st.text_input("Standardwert für fehlende Daten:", "NA")
 
 if input_file and delimiter:
-    original_df = pd.read_csv(input_file, sep=delimiter)
+    original_df = pd.read_csv(input_file, sep=delimiter, header=None)
 
-    # Get column names as numbers for selector
-    column_numbers = [str(i) for i in range(len(original_df.columns))]
-
-    # Select columns to remove spaces
-    remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie Leerzeichen entfernen möchten:", column_numbers)
-    st.write(f"Sie haben die folgenden Spalten ausgewählt, um Leerzeichen zu entfernen: {remove_spaces_columns}")
-
-    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, remove_spaces_columns, default_value)
-    
-    if original_df is not None and cleaned_df is not None:
-        st.write("### Originaldaten Vorschau")
+    if original_df is not None:
+        st.write("### Vorschau der Originaldaten")
         st.dataframe(original_df.head())
 
-        st.write("### Bereinigte Daten Vorschau")
-        st.dataframe(cleaned_df.head())
+        # Multiselect widget to choose columns for removing spaces
+        remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:",
+                                               original_df.columns)
 
-        st.write("### Bereinigungszusammenfassung")
-        st.write(f"Ursprüngliche Zeilen: {len(original_df)}, Bereinigte Zeilen: {len(cleaned_df)}")
+        original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, remove_spaces_columns, default_value)
 
-        # Analyse der Leerzeichenentfernung
-        st.write("### Analyse der Leerzeichenentfernung")
-        for col, count in space_removal_counts.items():
-            st.write(f"Anzahl der entfernten Leerzeichen in Spalte '{col}': {count}")
+        if original_df is not None and cleaned_df is not None:
+            st.write("### Vorschau der bereinigten Daten")
+            st.dataframe(cleaned_df.head())
 
-        # Download-Link für bereinigte Daten
-        cleaned_csv = cleaned_df.to_csv(index=False, header=False, sep=delimiter)  # No header and using specified delimiter
-        st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv, file_name=input_file.name, mime="text/csv")
+            st.write("### Bereinigungszusammenfassung")
+
+            # Display counts of removed spaces for each selected column
+            for col, count in space_removal_counts.items():
+                st.write(f"Anzahl der entfernten Leerzeichen in Spalte '{col}': {count}")
+
+            st.write(f"Ursprüngliche Zeilen: {len(original_df)}, Bereinigte Zeilen: {len(cleaned_df)}")
+
+            # Analyse der Leerzeichenentfernung
+            st.write("### Analyse der Leerzeichenentfernung")
+            total_space_removal_counts = sum(space_removal_counts.values())
+            st.write(f"Gesamtanzahl der entfernten Leerzeichen: {total_space_removal_counts}")
+
+            # Download-Link für bereinigte Daten
+            cleaned_csv = cleaned_df.to_csv(index=False, header=False, sep=delimiter)  # No header and using specified delimiter
+            st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv,
+                               file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
 
 else:
     st.error("Bitte laden Sie eine CSV- oder TXT-Datei hoch und geben Sie das Trennzeichen an.")
