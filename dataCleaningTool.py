@@ -10,7 +10,7 @@ def detect_encoding(file_content):
     encoding = result['encoding']
     return encoding
 
-def process_file(input_file, delimiter, columns_to_remove_spaces, default_value="NA"):
+def process_file(input_file, delimiter, default_value="NA"):
     content = input_file.getvalue()
     encoding = detect_encoding(content)
 
@@ -35,13 +35,12 @@ def process_file(input_file, delimiter, columns_to_remove_spaces, default_value=
 
         # Cleaning operations
         space_removal_counts = 0
-        for col_idx in columns_to_remove_spaces:
-            col = df.columns[col_idx]
-            # Remove spaces from the selected columns
+        for col in df.columns:
+            # Remove spaces from all values in the column
             df[col] = df[col].str.replace('\s+', '', regex=True)
             # Count spaces removed from the end of each value
             space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
-            # Remove foreign characters from the selected columns
+            # Remove foreign characters from all values in the column
             df[col] = df[col].apply(remove_foreign_characters)
             # Adjust values according to specifications
             df[col] = df[col].apply(adjust_values)
@@ -56,7 +55,7 @@ def process_file(input_file, delimiter, columns_to_remove_spaces, default_value=
 def remove_foreign_characters(value):
     if isinstance(value, str):
         # Remove foreign characters
-        return re.sub(r'[^a-zA-Z0-9,.@äöüÄÖÜß\s]+', '', value)
+        return re.sub(r'[^a-zA-Z0-9.,;@\-_]+', '', value)
     return value
 
 def adjust_values(value):
@@ -78,10 +77,7 @@ default_value = st.text_input("Standardwert für fehlende Daten:", "NA")
 if input_file and delimiter:
     original_df = pd.read_csv(input_file, sep=delimiter, header=None)
 
-    # Select columns to remove spaces
-    remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", range(len(original_df.columns)), format_func=lambda x: f"Spalte {x+1}")
-
-    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, remove_spaces_columns, default_value)
+    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, default_value)
     
     if original_df is not None and cleaned_df is not None:
         st.write("### Originaldaten Vorschau")
@@ -98,9 +94,8 @@ if input_file and delimiter:
         st.write(f"Anzahl der entfernten Leerzeichen: {space_removal_counts}")
 
         # Download-Link für bereinigte Daten
-        output_file_name = os.path.splitext(os.path.basename(input_file.name))[0] + "_bereinigt.csv"
         cleaned_csv = cleaned_df.to_csv(index=False, header=False, sep=delimiter)  # No header and using specified delimiter
-        st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv, file_name=output_file_name, mime="text/csv")
+        st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv, file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
 
 else:
     st.error("Bitte laden Sie eine CSV- oder TXT-Datei hoch und geben Sie das Trennzeichen an.")
