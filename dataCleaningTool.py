@@ -2,13 +2,14 @@ import streamlit as st
 import pandas as pd
 import chardet
 import io
+import re
 
 def detect_encoding(file_content):
     result = chardet.detect(file_content)
     encoding = result['encoding']
     return encoding
 
-def process_file(input_file, delimiter, remove_spaces_columns, default_value="NA"):
+def process_file(input_file, delimiter, columns_to_remove_spaces, default_value="NA"):
     content = input_file.getvalue()
     encoding = detect_encoding(content)
 
@@ -33,23 +34,12 @@ def process_file(input_file, delimiter, remove_spaces_columns, default_value="NA
 
         # Cleaning operations
         space_removal_counts = 0
-        for col in df.columns:
-            # Merge values separated by the delimiter
-            df[col] = df[col].str.replace(f'{delimiter}\s*', f'{delimiter}', regex=True)
-
-            # Remove characters that are not letters, numbers, periods, commas, or spaces
-            df[col] = df[col].str.replace('[^a-zA-Z0-9.,;@ ]', '', regex=True)
-
-            # Remove trailing spaces without affecting spaces within words
-            df[col] = df[col].str.rstrip()
-
+        for col_idx in columns_to_remove_spaces:
+            col = df.columns[col_idx]
+            # Remove spaces from the selected columns
+            df[col] = df[col].str.replace('\s+', '', regex=True)
             # Count spaces removed from the end of each value
             space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
-
-        # Remove spaces from selected columns
-        for col in remove_spaces_columns:
-            if col in df.columns:
-                df[col] = df[col].str.replace(' ', '')
 
         df.fillna(default_value, inplace=True)
 
@@ -66,10 +56,10 @@ delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
 default_value = st.text_input("Standardwert für fehlende Daten:", "NA")
 
 if input_file and delimiter:
-    original_df = pd.read_csv(input_file, sep=delimiter)
+    original_df = pd.read_csv(input_file, sep=delimiter, header=None)
 
     # Select columns to remove spaces
-    remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", original_df.columns)
+    remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", range(len(original_df.columns)))
 
     original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, remove_spaces_columns, default_value)
     
