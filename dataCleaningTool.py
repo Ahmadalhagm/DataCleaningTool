@@ -9,7 +9,7 @@ def detect_encoding(file_content):
     encoding = result['encoding']
     return encoding
 
-def process_file(input_file, delimiter, name_column, ibahn_column, ibahn_remove_chars, default_value="NA"):
+def process_file(input_file, delimiter, name_column, address_column, ibahn_column, ibahn_remove_chars, default_value="NA"):
     content = input_file.getvalue()
     encoding = detect_encoding(content)
 
@@ -42,6 +42,9 @@ def process_file(input_file, delimiter, name_column, ibahn_column, ibahn_remove_
                 # Remove spaces from IBAN values and specified characters
                 df[col] = df[col].str.replace(" ", "")
                 df[col] = df[col].str.replace(ibahn_remove_chars, "")
+            elif col == address_column:
+                # Remove spaces from the end of address values
+                df[col] = df[col].str.rstrip()
             else:
                 # Merge values separated by ';'
                 df[col] = df[col].str.replace(f'{delimiter}\s*', f'{delimiter}', regex=True)
@@ -71,21 +74,19 @@ default_value = st.text_input("Standardwert für fehlende Daten:", "NA")
 
 if input_file and delimiter:
     original_df = pd.read_csv(input_file, sep=delimiter)
-    ibahn_columns = []
-    for col in original_df.columns:
-        is_ibahn = st.checkbox(f"Spalte '{col}' enthält IBANs")
-        if is_ibahn:
-            ibahn_columns.append(col)
 
     name_column = st.selectbox("Wählen Sie die Name-Spalte aus:", original_df.columns)
     st.write(f"Sie haben '{name_column}' als Name-Spalte ausgewählt.")
+
+    address_column = st.selectbox("Wählen Sie die Adresse-Spalte aus:", original_df.columns)
+    st.write(f"Sie haben '{address_column}' als Adresse-Spalte ausgewählt.")
 
     ibahn_column = st.selectbox("Wählen Sie die IBAN-Spalte aus:", original_df.columns)
     st.write(f"Sie haben '{ibahn_column}' als IBAN-Spalte ausgewählt.")
 
     ibahn_remove_chars = st.text_input("Geben Sie die zu entfernenden Zeichen für IBANs ein:", "")
 
-    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, name_column, ibahn_column, ibahn_remove_chars, default_value)
+    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, name_column, address_column, ibahn_column, ibahn_remove_chars, default_value)
     
     if original_df is not None and cleaned_df is not None:
         st.write("### Originaldaten Vorschau")
