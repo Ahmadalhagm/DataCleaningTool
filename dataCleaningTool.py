@@ -10,7 +10,7 @@ def detect_encoding(file_content):
     encoding = result['encoding']
     return encoding
 
-def process_file(input_file, delimiter, default_value="NA"):
+def process_file(input_file, delimiter, remove_spaces_columns, default_value="NA"):
     content = input_file.getvalue()
     encoding = detect_encoding(content)
 
@@ -36,14 +36,14 @@ def process_file(input_file, delimiter, default_value="NA"):
         # Cleaning operations
         space_removal_counts = 0
         for col in df.columns:
-            # Remove spaces from all values in the column
-            df[col] = df[col].str.replace('\s+', '', regex=True)
-            # Count spaces removed from the end of each value
-            space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
-            # Remove foreign characters from all values in the column
+            # Remove spaces from selected columns
+            if col in remove_spaces_columns:
+                df[col] = df[col].str.replace('\s+', '', regex=True)
+                # Count spaces removed from the end of each value
+                space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
+
+            # Remove foreign characters from all values in the column without removing spaces
             df[col] = df[col].apply(remove_foreign_characters)
-            # Adjust values according to specifications
-            df[col] = df[col].apply(adjust_values)
 
         df.fillna(default_value, inplace=True)
 
@@ -54,17 +54,8 @@ def process_file(input_file, delimiter, default_value="NA"):
 
 def remove_foreign_characters(value):
     if isinstance(value, str):
-        # Remove foreign characters
-        return re.sub(r'[^a-zA-Z0-9.,;@\-_]+', '', value)
-    return value
-
-def adjust_values(value):
-    if isinstance(value, str):
-        # Remove 'AM' from the end and convert 'PM' to 'p'
-        value = value.replace('AM', 'a').replace('PM', 'p')
-        # Remove everything after ':' and take out ':' if it's followed by 'AM' or 'PM'
-        value = re.sub(r'(\d+):(\d+)\s?(AM|PM)?', r'\1\3', value)
-        return value
+        # Remove foreign characters except spaces
+        return re.sub(r'[^\w\s.,;@\-_]+', '', value)
     return value
 
 # Streamlit UI setup
@@ -73,11 +64,12 @@ st.title("CSV- und TXT-Datei bereinigen und analysieren")
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
 delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
 default_value = st.text_input("Standardwert für fehlende Daten:", "NA")
+remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", [])
 
 if input_file and delimiter:
     original_df = pd.read_csv(input_file, sep=delimiter, header=None)
 
-    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, default_value)
+    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, remove_spaces_columns, default_value)
     
     if original_df is not None and cleaned_df is not None:
         st.write("### Originaldaten Vorschau")
