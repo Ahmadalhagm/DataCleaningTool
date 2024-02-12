@@ -50,7 +50,7 @@ def process_file(input_file, delimiter, default_value="NA"):
         for col in df.columns:
             if df[col].dtype == 'object':  # Ensure the column is of type 'object' (string)
                 # Merge values separated by ';'
-                df[col] = df[col].str.replace(f'{delimiter}\s*', f'{delimiter}', regex=True)
+                df[col] = df[col].astype(str).str.replace(f'{delimiter}\s*', f'{delimiter}', regex=True)
 
                 # Remove characters that are not letters, numbers, periods, commas, or spaces
                 df[col] = df[col].str.replace('[^a-zA-Z0-9.,;@ ]', '', regex=True)
