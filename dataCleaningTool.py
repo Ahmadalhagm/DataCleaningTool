@@ -9,14 +9,14 @@ def detect_encoding(file_content):
     encoding = result['encoding']
     return encoding
 
-def process_file(input_file, delimiter, name_column, address_column, ibahn_column, ibahn_remove_chars, default_value="NA"):
+def process_file(input_file, delimiter, default_value="NA"):
     content = input_file.getvalue()
     encoding = detect_encoding(content)
 
     try:
         # Load the original data
         if input_file.name.endswith('.csv'):
-            original_df = pd.read_csv(io.BytesIO(content), sep=delimiter, encoding=encoding)
+            original_df = pd.read_csv(io.BytesIO(content), sep=delimiter, encoding=encoding, header=None)
         elif input_file.name.endswith('.txt'):
             original_df = pd.read_csv(io.BytesIO(content), sep=delimiter, encoding=encoding, header=None)
         else:
@@ -35,28 +35,17 @@ def process_file(input_file, delimiter, name_column, address_column, ibahn_colum
         # Cleaning operations
         space_removal_counts = 0
         for col in df.columns:
-            if col == name_column:
-                # Replace ';' with space in the name column
-                df[col] = df[col].str.replace(";", " ")
-            elif col == ibahn_column:
-                # Remove spaces from IBAN values and specified characters
-                df[col] = df[col].str.replace(" ", "")
-                df[col] = df[col].str.replace(ibahn_remove_chars, "")
-            elif col == address_column:
-                # Remove spaces from the end of address values
-                df[col] = df[col].str.rstrip()
-            else:
-                # Merge values separated by ';'
-                df[col] = df[col].str.replace(f'{delimiter}\s*', f'{delimiter}', regex=True)
+            # Merge values separated by ';'
+            df[col] = df[col].str.replace(f'{delimiter}\s*', f'{delimiter}', regex=True)
 
-                # Remove characters that are not letters, numbers, periods, commas, or spaces
-                df[col] = df[col].str.replace('[^a-zA-Z0-9.,;@ ]', '', regex=True)
+            # Remove characters that are not letters, numbers, periods, commas, or spaces
+            df[col] = df[col].str.replace('[^a-zA-Z0-9.,;@ ]', '', regex=True)
 
-                # Remove trailing spaces without affecting spaces within words
-                df[col] = df[col].str.rstrip()
+            # Remove trailing spaces without affecting spaces within words
+            df[col] = df[col].str.rstrip()
 
-                # Count spaces removed from the end of each value
-                space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
+            # Count spaces removed from the end of each value
+            space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
 
         df.fillna(default_value, inplace=True)
 
@@ -73,20 +62,7 @@ delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
 default_value = st.text_input("Standardwert für fehlende Daten:", "NA")
 
 if input_file and delimiter:
-    original_df = pd.read_csv(input_file, sep=delimiter)
-
-    name_column = st.selectbox("Wählen Sie die Name-Spalte aus:", original_df.columns)
-    st.write(f"Sie haben '{name_column}' als Name-Spalte ausgewählt.")
-
-    address_column = st.selectbox("Wählen Sie die Adresse-Spalte aus:", original_df.columns)
-    st.write(f"Sie haben '{address_column}' als Adresse-Spalte ausgewählt.")
-
-    ibahn_column = st.selectbox("Wählen Sie die IBAN-Spalte aus:", original_df.columns)
-    st.write(f"Sie haben '{ibahn_column}' als IBAN-Spalte ausgewählt.")
-
-    ibahn_remove_chars = st.text_input("Geben Sie die zu entfernenden Zeichen für IBANs ein:", "")
-
-    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, name_column, address_column, ibahn_column, ibahn_remove_chars, default_value)
+    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, default_value)
     
     if original_df is not None and cleaned_df is not None:
         st.write("### Originaldaten Vorschau")
@@ -103,7 +79,7 @@ if input_file and delimiter:
         st.write(f"Anzahl der entfernten Leerzeichen: {space_removal_counts}")
 
         # Download-Link für bereinigte Daten
-        cleaned_csv = cleaned_df.to_csv(index=False, sep=';')  # Specify ';' as separator
+        cleaned_csv = cleaned_df.to_csv(index=False, header=False, sep=delimiter)  # No header and using specified delimiter
         st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv, file_name="bereinigte_daten.csv", mime="text/csv")
 
 else:
