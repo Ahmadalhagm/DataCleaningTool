@@ -3,6 +3,7 @@ import pandas as pd
 import chardet
 import io
 import re
+import os
 
 def detect_encoding(file_content):
     result = chardet.detect(file_content)
@@ -55,7 +56,7 @@ def process_file(input_file, delimiter, columns_to_remove_spaces, default_value=
 def remove_foreign_characters(value):
     if isinstance(value, str):
         # Remove foreign characters
-        return re.sub(r'[^\w,.@ ]+', '', value)
+        return re.sub(r'[^a-zA-Z0-9,.@äöüÄÖÜß\s]+', '', value)
     return value
 
 def adjust_values(value):
@@ -78,7 +79,7 @@ if input_file and delimiter:
     original_df = pd.read_csv(input_file, sep=delimiter, header=None)
 
     # Select columns to remove spaces
-    remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", range(len(original_df.columns)), format_func=lambda x: f"Spalte {x}")
+    remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", range(len(original_df.columns)), format_func=lambda x: f"Spalte {x+1}")
 
     original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, remove_spaces_columns, default_value)
     
@@ -97,8 +98,9 @@ if input_file and delimiter:
         st.write(f"Anzahl der entfernten Leerzeichen: {space_removal_counts}")
 
         # Download-Link für bereinigte Daten
+        output_file_name = os.path.splitext(os.path.basename(input_file.name))[0] + "_bereinigt.csv"
         cleaned_csv = cleaned_df.to_csv(index=False, header=False, sep=delimiter)  # No header and using specified delimiter
-        st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv, file_name="bereinigte_daten.csv", mime="text/csv")
+        st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv, file_name=output_file_name, mime="text/csv")
 
 else:
     st.error("Bitte laden Sie eine CSV- oder TXT-Datei hoch und geben Sie das Trennzeichen an.")
