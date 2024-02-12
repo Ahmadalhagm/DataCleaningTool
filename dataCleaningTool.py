@@ -40,6 +40,10 @@ def process_file(input_file, delimiter, columns_to_remove_spaces, default_value=
             df[col] = df[col].str.replace('\s+', '', regex=True)
             # Count spaces removed from the end of each value
             space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
+            # Remove foreign characters from the selected columns
+            df[col] = df[col].apply(remove_foreign_characters)
+            # Adjust values according to specifications
+            df[col] = df[col].apply(adjust_values)
 
         df.fillna(default_value, inplace=True)
 
@@ -47,6 +51,21 @@ def process_file(input_file, delimiter, columns_to_remove_spaces, default_value=
     except Exception as e:
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None
+
+def remove_foreign_characters(value):
+    if isinstance(value, str):
+        # Remove foreign characters
+        return re.sub(r'[^\w,.@ ]+', '', value)
+    return value
+
+def adjust_values(value):
+    if isinstance(value, str):
+        # Remove 'AM' from the end and convert 'PM' to 'p'
+        value = value.replace('AM', 'a').replace('PM', 'p')
+        # Remove everything after ':' and take out ':' if it's followed by 'AM' or 'PM'
+        value = re.sub(r'(\d+):(\d+)\s?(AM|PM)?', r'\1\3', value)
+        return value
+    return value
 
 # Streamlit UI setup
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
@@ -59,7 +78,7 @@ if input_file and delimiter:
     original_df = pd.read_csv(input_file, sep=delimiter, header=None)
 
     # Select columns to remove spaces
-    remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", range(len(original_df.columns)))
+    remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", range(len(original_df.columns)), format_func=lambda x: f"Spalte {x}")
 
     original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, remove_spaces_columns, default_value)
     
