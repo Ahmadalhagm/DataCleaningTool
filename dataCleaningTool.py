@@ -3,6 +3,10 @@ import pandas as pd
 import chardet
 import io
 import re
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.pipeline import make_pipeline
+from sklearn.svm import SVC
+from sklearn.preprocessing import LabelEncoder
 
 def detect_encoding(file_content):
     result = chardet.detect(file_content)
@@ -58,11 +62,13 @@ def process_file(input_file, delimiter, default_value="NA"):
             # Remove trailing spaces without affecting spaces within words
             df[col] = df[col].apply(lambda x: x.rstrip() if isinstance(x, str) else x)
 
-            # Remove spaces from values containing both numbers and letters
-            df[col] = df[col].apply(remove_spaces)
-
-            # Count spaces removed from the end of each value
-            space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
+            # Apply ML to identify IBANs or bank account numbers
+            if col != "Ibahn":
+                is_ibahn = classify_ibahn(df[col])
+                if is_ibahn:
+                    # Remove spaces from IBANs or bank account numbers
+                    df[col] = df[col].apply(lambda x: x.replace(" ", ""))
+                    df.rename(columns={col: 'Ibahn'}, inplace=True)
 
         df.fillna(default_value, inplace=True)
 
@@ -71,14 +77,10 @@ def process_file(input_file, delimiter, default_value="NA"):
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None
 
-def remove_spaces(value):
-    if isinstance(value, str):
-        if re.match(r'^\s*\w+\s*\d+\s*\w+\s*$', value):
-            return value.replace(" ", "")
-        else:
-            return value
-    else:
-        return value
+def classify_ibahn(values):
+    # Here you can implement your ML model to classify IBANs or bank account numbers
+    # For demonstration purposes, we'll use a simple heuristic based on the length of the string
+    return values.apply(lambda x: len(x) == 22)  # Assuming IBANs are 22 characters long
 
 def character_replacement_analysis(original_df, cleaned_df):
     # Analysis of character replacements
@@ -122,7 +124,7 @@ if input_file and delimiter:
         st.write(f"Anzahl der entfernten Leerzeichen: {space_removal_counts}")
 
         # Download-Link für bereinigte Daten
-        cleaned_csv = cleaned_df.to_csv(index=False)
+        cleaned_csv = cleaned_df.to_csv(index=False, sep=";")
         st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv, file_name="bereinigte_daten.csv", mime="text/csv")
 
 else:
