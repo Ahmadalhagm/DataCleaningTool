@@ -49,7 +49,7 @@ def process_file(input_file, delimiter, ibahn_column, name_column, address_colum
 
             # Apply IBAN cleaning if the column is selected as IBAN column
             if col == ibahn_column:
-                df[col] = df[col].apply(clean_ibahn)
+                df[col] = df[col].str.replace(" ", "")  # Remove all spaces
 
             # Replace ';' with space in the name column
             if col == name_column:
@@ -65,13 +65,6 @@ def process_file(input_file, delimiter, ibahn_column, name_column, address_colum
     except Exception as e:
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None
-
-def clean_ibahn(value):
-    if isinstance(value, str):
-        # Remove all spaces
-        value = value.replace(" ", "")
-        return value
-    return value
 
 def remove_spaces_from_mixed(value):
     if isinstance(value, str):
