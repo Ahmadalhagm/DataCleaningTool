@@ -16,14 +16,9 @@ def process_file(input_file, delimiter, default_value="NA"):
     try:
         # Load the original data
         if input_file.name.endswith('.csv'):
-            original_df = pd.read_csv(io.StringIO(content.decode(encoding)),
-                                      sep=delimiter,
-                                      encoding=encoding)
+            original_df = pd.read_csv(io.BytesIO(content), sep=delimiter, encoding=encoding)
         elif input_file.name.endswith('.txt'):
-            original_df = pd.read_csv(io.StringIO(content.decode(encoding)),
-                                      sep=delimiter,
-                                      encoding=encoding,
-                                      header=None)
+            original_df = pd.read_csv(io.BytesIO(content), sep=delimiter, encoding=encoding, header=None)
         else:
             st.error("Nur .csv- und .txt-Dateien werden unterstützt.")
             return None, None, None
