@@ -9,7 +9,7 @@ def detect_encoding(file_content):
     encoding = result['encoding']
     return encoding
 
-def process_file(input_file, delimiter, ibahn_columns, default_value="NA"):
+def process_file(input_file, delimiter, name_column, ibahn_columns, default_value="NA"):
     content = input_file.getvalue()
     encoding = detect_encoding(content)
 
@@ -38,6 +38,9 @@ def process_file(input_file, delimiter, ibahn_columns, default_value="NA"):
             if col in ibahn_columns:
                 # Remove spaces from values in IBAN columns
                 df[col] = df[col].str.replace(" ", "")
+            elif col == name_column:
+                # Replace ';' with space in the name column
+                df[col] = df[col].str.replace(";", " ")
             else:
                 # Merge values separated by ';'
                 df[col] = df[col].str.replace(f'{delimiter}\s*', f'{delimiter}', regex=True)
@@ -73,7 +76,10 @@ if input_file and delimiter:
         if is_ibahn:
             ibahn_columns.append(col)
 
-    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, ibahn_columns, default_value)
+    name_column = st.selectbox("Wählen Sie die Name-Spalte aus:", original_df.columns)
+    st.write(f"Sie haben '{name_column}' als Name-Spalte ausgewählt.")
+
+    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, name_column, ibahn_columns, default_value)
     
     if original_df is not None and cleaned_df is not None:
         st.write("### Originaldaten Vorschau")
