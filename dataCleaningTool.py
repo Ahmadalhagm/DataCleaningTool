@@ -36,8 +36,8 @@ def process_file(input_file, delimiter, remove_spaces_columns, default_value="NA
         # Cleaning operations
         space_removal_counts = {}
         for col in df.columns:
-            # Remove spaces from selected columns
             if col in remove_spaces_columns:
+                # Remove spaces from selected columns
                 df[col] = df[col].str.replace('\s+', '', regex=True)
                 # Count spaces removed from the end of each value
                 space_removal_counts[col] = (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
@@ -75,8 +75,6 @@ if input_file and delimiter:
         # Multiselect widget to choose columns for removing spaces
         remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:",
                                                original_df.columns)
-
-        space_removal_counts = {}
 
         original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, remove_spaces_columns, default_value)
 
