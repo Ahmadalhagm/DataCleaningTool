@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import chardet
 import io
-import re
 
 def detect_encoding(file_content):
     result = chardet.detect(file_content)
