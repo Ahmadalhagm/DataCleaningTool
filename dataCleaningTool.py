@@ -68,8 +68,8 @@ def process_file(input_file, delimiter, ibahn_column, name_column, address_colum
 
 def clean_ibahn(value):
     if isinstance(value, str):
-        # Remove all spaces
-        value = value.replace(" ", "")
+        # Remove all spaces and non-alphanumeric characters
+        value = re.sub(r'[^a-zA-Z0-9]', '', value)
         return value
     return value
 
