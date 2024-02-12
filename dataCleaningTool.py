@@ -34,13 +34,13 @@ def process_file(input_file, delimiter, remove_spaces_columns, default_value="NA
         df = original_df.copy()
 
         # Cleaning operations
-        space_removal_counts = 0
+        space_removal_counts = {}
         for col in df.columns:
             # Remove spaces from selected columns
             if col in remove_spaces_columns:
                 df[col] = df[col].str.replace('\s+', '', regex=True)
                 # Count spaces removed from the end of each value
-                space_removal_counts += (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
+                space_removal_counts[col] = (original_df[col].str.len() - original_df[col].str.rstrip().str.len()).sum()
 
             # Remove foreign characters from all values in the column without removing spaces
             df[col] = df[col].apply(remove_foreign_characters)
@@ -76,6 +76,8 @@ if input_file and delimiter:
         remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:",
                                                original_df.columns)
 
+        space_removal_counts = {}
+
         original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, remove_spaces_columns, default_value)
 
         if original_df is not None and cleaned_df is not None:
@@ -83,11 +85,17 @@ if input_file and delimiter:
             st.dataframe(cleaned_df.head())
 
             st.write("### Bereinigungszusammenfassung")
+
+            # Display counts of removed spaces for each selected column
+            for col, count in space_removal_counts.items():
+                st.write(f"Anzahl der entfernten Leerzeichen in Spalte '{col}': {count}")
+
             st.write(f"Ursprüngliche Zeilen: {len(original_df)}, Bereinigte Zeilen: {len(cleaned_df)}")
 
             # Analyse der Leerzeichenentfernung
             st.write("### Analyse der Leerzeichenentfernung")
-            st.write(f"Anzahl der entfernten Leerzeichen: {space_removal_counts}")
+            total_space_removal_counts = sum(space_removal_counts.values())
+            st.write(f"Gesamtanzahl der entfernten Leerzeichen: {total_space_removal_counts}")
 
             # Download-Link für bereinigte Daten
             cleaned_csv = cleaned_df.to_csv(index=False, header=False, sep=delimiter)  # No header and using specified delimiter
