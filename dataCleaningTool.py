@@ -47,13 +47,13 @@ def process_file(input_file, delimiter, default_value="NA"):
         space_removal_counts = 0
         for col in df.columns:
             # Merge values separated by ';'
-            df[col] = df[col].str.replace(f'{delimiter}\s*', f'{delimiter}', regex=True)
+            df[col] = df[col].apply(lambda x: re.sub(fr'{delimiter}\s*', fr'{delimiter}', x) if isinstance(x, str) else x)
 
             # Remove characters that are not letters, numbers, periods, commas, or spaces
-            df[col] = df[col].str.replace('[^a-zA-Z0-9.,;@ ]', '', regex=True)
+            df[col] = df[col].apply(lambda x: re.sub(r'[^a-zA-Z0-9.,;@ ]', '', x) if isinstance(x, str) else x)
 
             # Remove trailing spaces without affecting spaces within words
-            df[col] = df[col].str.rstrip()
+            df[col] = df[col].apply(lambda x: x.rstrip() if isinstance(x, str) else x)
 
             # Remove spaces from values containing both numbers and letters
             df[col] = df[col].apply(remove_spaces)
