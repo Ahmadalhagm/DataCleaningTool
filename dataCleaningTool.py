@@ -9,7 +9,7 @@ def detect_encoding(file_content):
     encoding = result['encoding']
     return encoding
 
-def process_file(input_file, delimiter, name_column, ibahn_columns, default_value="NA"):
+def process_file(input_file, delimiter, name_column, ibahn_column, ibahn_remove_chars, default_value="NA"):
     content = input_file.getvalue()
     encoding = detect_encoding(content)
 
@@ -35,12 +35,13 @@ def process_file(input_file, delimiter, name_column, ibahn_columns, default_valu
         # Cleaning operations
         space_removal_counts = 0
         for col in df.columns:
-            if col in ibahn_columns:
-                # Remove spaces from values in IBAN columns
-                df[col] = df[col].str.replace(" ", "")
-            elif col == name_column:
+            if col == name_column:
                 # Replace ';' with space in the name column
                 df[col] = df[col].str.replace(";", " ")
+            elif col == ibahn_column:
+                # Remove spaces from IBAN values and specified characters
+                df[col] = df[col].str.replace(" ", "")
+                df[col] = df[col].str.replace(ibahn_remove_chars, "")
             else:
                 # Merge values separated by ';'
                 df[col] = df[col].str.replace(f'{delimiter}\s*', f'{delimiter}', regex=True)
@@ -79,7 +80,12 @@ if input_file and delimiter:
     name_column = st.selectbox("Wählen Sie die Name-Spalte aus:", original_df.columns)
     st.write(f"Sie haben '{name_column}' als Name-Spalte ausgewählt.")
 
-    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, name_column, ibahn_columns, default_value)
+    ibahn_column = st.selectbox("Wählen Sie die IBAN-Spalte aus:", original_df.columns)
+    st.write(f"Sie haben '{ibahn_column}' als IBAN-Spalte ausgewählt.")
+
+    ibahn_remove_chars = st.text_input("Geben Sie die zu entfernenden Zeichen für IBANs ein:", "")
+
+    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, name_column, ibahn_column, ibahn_remove_chars, default_value)
     
     if original_df is not None and cleaned_df is not None:
         st.write("### Originaldaten Vorschau")
