@@ -44,6 +44,8 @@ def process_file(input_file, delimiter, remove_spaces_columns, default_value="NA
 
             # Remove foreign characters from all values in the column without removing spaces
             df[col] = df[col].apply(remove_foreign_characters)
+            # Remove two zeros from the end of the value if it ends with capital "AM"
+            df[col] = df[col].apply(remove_zeros_from_am)
 
         df.fillna(default_value, inplace=True)
 
@@ -56,6 +58,12 @@ def remove_foreign_characters(value):
     if isinstance(value, str):
         # Remove foreign characters except spaces
         return re.sub(r'[^\w\s.,;@\-_]+', '', value)
+    return value
+
+def remove_zeros_from_am(value):
+    if isinstance(value, str) and value.strip().endswith('AM'):
+        # Remove two zeros from the end if it ends with capital "AM"
+        return value[:-2].strip()
     return value
 
 # Streamlit UI setup
