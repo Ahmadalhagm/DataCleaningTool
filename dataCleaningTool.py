@@ -74,29 +74,39 @@ delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
 default_value = st.text_input("Standardwert für fehlende Daten:", "NA")
 
 if input_file and delimiter:
-    original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, remove_spaces_columns, default_value)
+    original_df = pd.read_csv(input_file, sep=delimiter, header=None)
 
-    if original_df is not None and cleaned_df is not None:
-        st.write("### Vorschau der bereinigten Daten")
-        st.dataframe(cleaned_df.head())
+    if original_df is not None:
+        st.write("### Vorschau der Originaldaten")
+        st.dataframe(original_df.head())
 
-        st.write("### Bereinigungszusammenfassung")
+        # Multiselect widget to choose columns for removing spaces
+        remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:",
+                                               original_df.columns)
 
-        # Display counts of removed spaces for each selected column
-        for col, count in space_removal_counts.items():
-            st.write(f"Anzahl der entfernten Leerzeichen in Spalte '{col}': {count}")
+        original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, remove_spaces_columns, default_value)
 
-        st.write(f"Ursprüngliche Zeilen: {len(original_df)}, Bereinigte Zeilen: {len(cleaned_df)}")
+        if original_df is not None and cleaned_df is not None:
+            st.write("### Vorschau der bereinigten Daten")
+            st.dataframe(cleaned_df.head())
 
-        # Analyse der Leerzeichenentfernung
-        st.write("### Analyse der Leerzeichenentfernung")
-        total_space_removal_counts = sum(space_removal_counts.values())
-        st.write(f"Gesamtanzahl der entfernten Leerzeichen: {total_space_removal_counts}")
+            st.write("### Bereinigungszusammenfassung")
 
-        # Download-Link für bereinigte Daten
-        cleaned_csv = cleaned_df.to_csv(index=False, header=False, sep=delimiter, encoding='utf-8-sig')  # Specify UTF-8 encoding
-        st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv,
-                           file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
+            # Display counts of removed spaces for each selected column
+            for col, count in space_removal_counts.items():
+                st.write(f"Anzahl der entfernten Leerzeichen in Spalte '{col}': {count}")
+
+            st.write(f"Ursprüngliche Zeilen: {len(original_df)}, Bereinigte Zeilen: {len(cleaned_df)}")
+
+            # Analyse der Leerzeichenentfernung
+            st.write("### Analyse der Leerzeichenentfernung")
+            total_space_removal_counts = sum(space_removal_counts.values())
+            st.write(f"Gesamtanzahl der entfernten Leerzeichen: {total_space_removal_counts}")
+
+            # Download-Link für bereinigte Daten
+            cleaned_csv = cleaned_df.to_csv(index=False, header=False, sep=delimiter, encoding='utf-8-sig')  # Specify UTF-8 encoding
+            st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv,
+                               file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
 
 else:
     st.error("Bitte laden Sie eine CSV- oder TXT-Datei hoch und geben Sie das Trennzeichen an.")
