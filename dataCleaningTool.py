@@ -107,7 +107,7 @@ if input_file and delimiter:
             st.write(f"Gesamtanzahl der entfernten Leerzeichen: {total_space_removal_counts}")
 
             # Download-Link für bereinigte Daten
-            cleaned_csv = cleaned_df.to_csv(index=False, header=False, sep=delimiter)  # No header and using specified delimiter
+            cleaned_csv = cleaned_df.to_csv(index=False, header=False, sep=delimiter, encoding='utf-8-sig')  # Specify UTF-8 encoding
             st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv,
                                file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
 
