@@ -46,7 +46,7 @@ def process_file(input_file, delimiter, remove_spaces_columns):
             df[col] = df[col].apply(replace_am_and_remove_zeros)
 
         # Remove NaN values
-        df.dropna(axis=0, how='any', inplace=True)
+        df.fillna('', inplace=True)
 
         return original_df, df, space_removal_counts  # Return both the original and cleaned DataFrame
     except Exception as e:
@@ -106,7 +106,7 @@ if input_file and delimiter:
 
             # Prepare the cleaned CSV data
             cleaned_csv_buffer = io.StringIO()
-            cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8-sig', na_rep='')  # Specify UTF-8 with BOM encoding and preserve empty values
+            cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8-sig')  # Specify UTF-8 with BOM encoding
             cleaned_csv_data = cleaned_csv_buffer.getvalue()
             cleaned_csv_buffer.seek(0)
 
