@@ -45,6 +45,9 @@ def process_file(input_file, delimiter, remove_spaces_columns):
             # Replace "AM" with "A" and remove two zeros if found
             df[col] = df[col].apply(replace_am_and_remove_zeros)
 
+            # Replace empty strings with None
+            df[col].replace('', None, inplace=True)
+
         return original_df, df, space_removal_counts  # Return both the original and cleaned DataFrame
     except Exception as e:
         st.error(f"Ein Fehler ist aufgetreten: {e}")
