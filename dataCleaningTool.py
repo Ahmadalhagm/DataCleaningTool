@@ -4,6 +4,7 @@ import chardet
 import io
 import re
 import os
+import csv
 
 def detect_encoding(file_content):
     result = chardet.detect(file_content)
@@ -103,9 +104,14 @@ if input_file and delimiter:
             total_space_removal_counts = sum(space_removal_counts.values())
             st.write(f"Gesamtanzahl der entfernten Leerzeichen: {total_space_removal_counts}")
 
-            # Download-Link für bereinigte Daten
-            cleaned_csv = cleaned_df.to_csv(index=False, header=False, sep=delimiter, encoding='utf-8-sig')  # Specify UTF-8 encoding with BOM
-            st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv,
+            # Prepare the cleaned CSV data
+            cleaned_csv_buffer = io.StringIO()
+            cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8-sig')  # Specify UTF-8 with BOM encoding
+            cleaned_csv_data = cleaned_csv_buffer.getvalue()
+            cleaned_csv_buffer.seek(0)
+
+            # Provide the cleaned CSV file for download
+            st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv_data.encode('utf-8-sig'),
                                file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
 
 else:
