@@ -104,11 +104,9 @@ if input_file and delimiter:
             st.write(f"Gesamtanzahl der entfernten Leerzeichen: {total_space_removal_counts}")
 
             # Download-Link für bereinigte Daten
-            cleaned_excel_bytes = io.BytesIO()
-            cleaned_df.to_excel(cleaned_excel_bytes, index=False, header=False)
-            cleaned_excel_bytes.seek(0)
-            st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_excel_bytes,
-                               file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            cleaned_csv = cleaned_df.to_csv(index=False, header=False, sep=delimiter, encoding='utf-8-sig')  # Specify UTF-8 encoding with BOM
+            st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv,
+                               file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
 
 else:
     st.error("Bitte laden Sie eine CSV- oder TXT-Datei hoch und geben Sie das Trennzeichen an.")
