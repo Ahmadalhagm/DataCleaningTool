@@ -45,6 +45,9 @@ def process_file(input_file, delimiter, remove_spaces_columns):
             # Replace "AM" with "A" and remove two zeros if found
             df[col] = df[col].apply(replace_am_and_remove_zeros)
 
+        # Remove NaN values
+        df.dropna(axis=0, how='any', inplace=True)
+
         return original_df, df, space_removal_counts  # Return both the original and cleaned DataFrame
     except Exception as e:
         st.error(f"Ein Fehler ist aufgetreten: {e}")
@@ -63,11 +66,7 @@ def replace_am_and_remove_zeros(value):
         # Remove two zeros if found
         value = re.sub(r'(\d+)00(?=\s*A$)', r'\1', value)
         return value.strip()  # Remove leading and trailing whitespaces
-    elif pd.isna(value):
-        return value
-    else:
-        return str(value)
-
+    return value
 
 # Streamlit UI setup
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
@@ -107,4 +106,13 @@ if input_file and delimiter:
 
             # Prepare the cleaned CSV data
             cleaned_csv_buffer = io.StringIO()
-            cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8-sig', na_rep='')  # Specify UTF-8 with
+            cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8-sig', na_rep='')  # Specify UTF-8 with BOM encoding and preserve empty values
+            cleaned_csv_data = cleaned_csv_buffer.getvalue()
+            cleaned_csv_buffer.seek(0)
+
+            # Provide the cleaned CSV file for download
+            st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv_data.encode('utf-8-sig'),
+                               file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
+
+else:
+    st.error("Bitte laden Sie eine CSV- oder TXT-Datei hoch und geben Sie das Trennzeichen an.")
