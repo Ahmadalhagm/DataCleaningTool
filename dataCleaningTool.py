@@ -63,7 +63,11 @@ def replace_am_and_remove_zeros(value):
         # Remove two zeros if found
         value = re.sub(r'(\d+)00(?=\s*A$)', r'\1', value)
         return value.strip()  # Remove leading and trailing whitespaces
-    return value
+    elif pd.isna(value):
+        return value
+    else:
+        return str(value)
+
 
 # Streamlit UI setup
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
