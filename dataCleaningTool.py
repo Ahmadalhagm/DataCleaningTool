@@ -57,7 +57,7 @@ def process_file(input_file, delimiter, remove_spaces_columns):
 def remove_foreign_characters(value):
     if isinstance(value, str):
         # Remove foreign characters except spaces and German umlauts
-        return re.sub(r'[^\w\s.,;@\-_äöüÄÖÜß]+', '', value)
+        return re.sub(r'[^\w\s.,;@#\-_äöüÄÖÜß]+', '', value)
     return value
 
 def replace_am_and_remove_zeros(value):
