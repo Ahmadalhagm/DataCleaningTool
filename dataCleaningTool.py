@@ -11,7 +11,7 @@ def detect_encoding(file_content):
     encoding = result['encoding']
     return encoding
 
-def process_file(input_file, delimiter, remove_spaces_columns, default_value="NA"):
+def process_file(input_file, delimiter, remove_spaces_columns):
     content = input_file.getvalue()
     encoding = detect_encoding(content)
 
@@ -45,8 +45,6 @@ def process_file(input_file, delimiter, remove_spaces_columns, default_value="NA
             # Replace "AM" with "A" and remove two zeros if found
             df[col] = df[col].apply(replace_am_and_remove_zeros)
 
-        df.fillna(default_value, inplace=True)
-
         return original_df, df, space_removal_counts  # Return both the original and cleaned DataFrame
     except Exception as e:
         st.error(f"Ein Fehler ist aufgetreten: {e}")
@@ -72,7 +70,6 @@ st.title("CSV- und TXT-Datei bereinigen und analysieren")
 
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
 delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
-default_value = st.text_input("Standardwert für fehlende Daten:", "NA")
 
 if input_file and delimiter:
     original_df = pd.read_csv(input_file, sep=delimiter, header=None)
@@ -85,7 +82,7 @@ if input_file and delimiter:
         remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:",
                                                original_df.columns)
 
-        original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, remove_spaces_columns, default_value)
+        original_df, cleaned_df, space_removal_counts = process_file(input_file, delimiter, remove_spaces_columns)
 
         if original_df is not None and cleaned_df is not None:
             st.write("### Vorschau der bereinigten Daten")
