@@ -47,7 +47,7 @@ def process_file(input_file, delimiter, remove_spaces_columns):
 
         # Remove NaN values
         df.fillna('', inplace=True)
-        df.replace('nan', '', inplace=True)  # Replace 'nan' strings with empty strings
+        df.replace('nan', None, inplace=True)  # Replace 'nan' strings with None
 
         return original_df, df, space_removal_counts  # Return both the original and cleaned DataFrame
     except Exception as e:
