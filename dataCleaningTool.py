@@ -6,7 +6,6 @@ import io
 import re
 import os
 import csv
-from scipy.stats import skew, kurtosis
 
 def detect_encoding(file_content):
     result = chardet.detect(file_content)
@@ -62,9 +61,10 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
         return None, None, None, None, None, None
 
 def statistical_analysis(df):
+    # Adjusted statistical analysis to use pandas for skewness and kurtosis
     desc = df.describe()
-    skewness = df.skew()
-    kurt = df.kurtosis()
+    skewness = df.skew()  # Pandas built-in function
+    kurt = df.kurtosis()  # Pandas built-in function
     Q1 = df.quantile(0.25)
     Q3 = df.quantile(0.75)
     IQR = Q3 - Q1
