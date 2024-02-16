@@ -51,15 +51,12 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None, None
 
-def find_rows_with_one_more_separator(df):
-    rows_with_more_separators = []
+def find_rows_without_semicolon_at_end(df):
+    rows_without_semicolon_at_end = []
     for idx, row in df.iterrows():
-        separators_count = row.str.count(';').sum()
-        if separators_count > 0:
-            first_separators_count = row.iloc[0].count(';')
-            if any((col.count(';') - first_separators_count) == 1 for col in row):
-                rows_with_more_separators.append(idx)
-    return rows_with_more_separators
+        if not row.iloc[-1].endswith(';'):
+            rows_without_semicolon_at_end.append(idx)
+    return rows_without_semicolon_at_end
 
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
@@ -84,10 +81,10 @@ if input_file and delimiter:
         st.write("### Vorschau der bereinigten Daten")
         st.dataframe(cleaned_df.head())
         
-        rows_with_more_separators = find_rows_with_one_more_separator(cleaned_df)
-        if rows_with_more_separators:
-            st.write("### Zeilen mit einem zusätzlichen Separator")
-            for row_idx in rows_with_more_separators:
+        rows_without_semicolon_at_end = find_rows_without_semicolon_at_end(cleaned_df)
+        if rows_without_semicolon_at_end:
+            st.write("### Zeilen ohne Semikolon am Ende")
+            for row_idx in rows_without_semicolon_at_end:
                 st.write(f"Zeile {row_idx + 1}: {'; '.join(cleaned_df.iloc[row_idx])}")
                 col_to_replace_separator = st.selectbox("Wählen Sie die Spalte, in der der Separator ersetzt werden soll:", cleaned_df.columns)
                 cleaned_df[col_to_replace_separator] = cleaned_df[col_to_replace_separator].str.replace(';', ',')
