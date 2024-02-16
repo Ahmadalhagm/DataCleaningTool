@@ -53,9 +53,10 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
 
 def find_rows_without_semicolon_at_end(df):
     rows_without_semicolon_at_end = []
-    for idx, row in df.iterrows():
-        if not row.iloc[-1].endswith(';'):
-            rows_without_semicolon_at_end.append(idx)
+    if not df.empty:
+        for idx, row in df.iterrows():
+            if not row.iloc[-1].endswith(';'):
+                rows_without_semicolon_at_end.append(idx)
     return rows_without_semicolon_at_end
 
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
