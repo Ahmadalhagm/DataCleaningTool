@@ -19,7 +19,6 @@ def remove_foreign_characters(value):
     return new_value, ''.join(set(removed_chars))
 
 def is_email_like(value):
-    # Use a simple regex pattern to check if the value resembles an email address
     pattern = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
     return bool(pattern.match(value))
 
@@ -44,11 +43,8 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
 
         if merge_columns:
             merged_column_name = df.columns[min(merge_columns)]
-            for idx, row in df.iterrows():
-                for i in range(len(row) - 1):
-                    if is_email_like(row[i]) and is_email_like(row[i + 1]):
-                        row[i] = row[i] + merge_separator + row[i + 1]
-                        row[i + 1] = ''
+            merged_values = df[merge_columns].apply(lambda x: merge_separator.join(x), axis=1)
+            df[merged_column_name] = merged_values
             df.drop(columns=[df.columns[i] for i in merge_columns if i != min(merge_columns)], inplace=True)
 
         space_removal_counts = {}
