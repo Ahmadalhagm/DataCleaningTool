@@ -74,7 +74,8 @@ def compare_and_replace_separator(df, compare_columns):
     return df
 
 def is_email_like(value):
-    return re.match(r"[^@]+@[^@]+\.[^@]+", value)
+    # Use a broader regular expression pattern to match email-like values
+    return re.match(r"[^@\s]+@[^@\s]+\.[a-zA-Z0-9]+$", value)
 
 # Streamlit UI setup
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
@@ -101,9 +102,9 @@ if input_file and delimiter:
     original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, merge_columns_selection, merge_separator, remove_empty_or_space_columns, use_column_names)
     if original_df is not None and cleaned_df is not None:
         st.write("### Vorschau der Originaldaten")
-        st.dataframe(original_df.head())
+        st.dataframe(original_df)
         st.write("### Vorschau der bereinigten Daten")
-        st.dataframe(cleaned_df.head())
+        st.dataframe(cleaned_df)
         
         with st.expander("Analyse", expanded=False):
             st.write("#### Datenbereinigungsanalyse")
@@ -120,13 +121,7 @@ if input_file and delimiter:
             # Statistical Summary for numerical data
             if not cleaned_df.select_dtypes(include=np.number).empty:
                 st.write("### Erweiterte statistische Analyse für numerische Daten")
-                desc = cleaned_df.describe()
-                skewness = cleaned_df.skew()  # Pandas built-in function
-                kurt = cleaned_df.kurtosis()  # Pandas built-in function
-                Q1 = cleaned_df.quantile(0.25)
-                Q3 = cleaned_df.quantile(0.75)
-                IQR = Q3 - Q1
-                outliers = ((cleaned_df < (Q1 - 1.5 * IQR)) | (cleaned_df > (Q3 + 1.5 * IQR))).sum()
+                desc, skewness, kurt, outliers = statistical_analysis(cleaned_df.select_dtypes(include=[np.number]))
                 st.dataframe(desc)
                 st.write("### Schiefe (Skewness)")
                 st.dataframe(skewness)
@@ -134,3 +129,12 @@ if input_file and delimiter:
                 st.dataframe(kurt)
                 st.write("### Ausreißer (Outliers)")
                 st.dataframe(outliers)
+        
+        if compare_values:
+            cleaned_df = compare_and_replace_separator(cleaned_df, compare_values)
+
+        cleaned_csv_buffer = io.StringIO()
+        cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8-sig')
+        cleaned_csv_data = cleaned_csv_buffer.getvalue()
+        cleaned_csv_buffer.seek(0)
+        st.download_button("Bereinigte Daten herunterladen", data=cleaned_csv_data.encode('utf-8-sig'), file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
