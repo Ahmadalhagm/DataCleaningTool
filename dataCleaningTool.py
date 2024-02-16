@@ -19,7 +19,7 @@ def remove_foreign_characters(value):
     return new_value, ''.join(set(removed_chars))
 
 def is_email_like(value):
-    pattern = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
+    pattern = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z9.-]+\.[A-Z|a-z]{2,}\b')
     return bool(pattern.match(value))
 
 def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, merge_separator, remove_empty_or_space_columns, correct_misinterpretation):
@@ -38,19 +38,16 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
         df = original_df.copy()
 
         if correct_misinterpretation:
-            for idx, row in df.iterrows():
-                for i in range(len(row) - 1):
-                    if row[i] and row[i + 1] and is_email_like(row[i]) and is_email_like(row[i + 1]):
-                        row[i] = row[i] + ',' + row[i + 1]
-                        row[i + 1] = ''
-
-        if merge_columns:
-            merge_columns = [col - 1 for col in merge_columns]  # Adjust index
-            merged_column_name = df.columns[min(merge_columns)]
-            merged_values = df[merge_columns].apply(lambda x: merge_separator.join(x), axis=1)
-            non_null_mask = df[merge_columns].apply(lambda row: not row.isnull().any(), axis=1)
-            df.loc[non_null_mask, merged_column_name] = merged_values[non_null_mask]
-            df.drop(columns=[df.columns[i] for i in merge_columns if i != min(merge_columns)], inplace=True)
+            none_ending_rows = df[df.iloc[:, -1] == 'None'].index
+            if len(none_ending_rows) > 0:
+                non_none_ending_rows = df[df.iloc[:, -1] != 'None']
+                merge_rows_selection = st.multiselect("Wählen Sie die Spalten zum Zusammenführen für die ausgewählten Zeilen:", list(non_none_ending_rows.index))
+                merge_columns = [col - 1 for col in merge_columns]  # Adjust index
+                merged_column_name = df.columns[min(merge_columns)]
+                merged_values = df[merge_columns].apply(lambda x: merge_separator.join(x), axis=1)
+                non_null_mask = df[merge_columns].apply(lambda row: not row.isnull().any(), axis=1)
+                df.loc[non_null_mask, merged_column_name] = merged_values[non_null_mask]
+                df.drop(columns=[df.columns[i] for i in merge_columns if i != min(merge_columns)], inplace=True)
 
         space_removal_counts = {}
         foreign_characters_removed = {}
