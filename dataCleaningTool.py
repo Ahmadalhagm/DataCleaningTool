@@ -51,21 +51,10 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None, None
 
-def convert_csv_to_txt(input_file):
-    content = input_file.getvalue()
-    with open("temp_file.csv", "wb") as f:
-        f.write(content)
-    os.system("csvtotxt temp_file.csv temp_file.txt")
-    with open("temp_file.txt", "r") as f:
-        txt_content = f.readlines()
-    os.remove("temp_file.csv")
-    os.remove("temp_file.txt")
-    return txt_content
-
-def find_rows_with_semicolon_at_end(txt_content):
+def find_rows_with_semicolon_at_end(original_df):
     rows_with_semicolon_at_end = []
-    for idx, line in enumerate(txt_content):
-        if line.strip().endswith(';'):
+    for idx, row in original_df.iterrows():
+        if row.iloc[-1].endswith(';'):
             rows_with_semicolon_at_end.append(idx)
     return rows_with_semicolon_at_end
 
@@ -99,9 +88,8 @@ if input_file and delimiter:
             st.write(f"Bereinigte Zeilen: {len(cleaned_df)}, Bereinigte Spalten: {cleaned_df.shape[1]}")
             for col, count in space_removal_counts.items():
                 st.write(f"Leerzeichen entfernt in Spalte '{col}': {count}")
-
-        txt_content = convert_csv_to_txt(input_file)
-        rows_with_semicolon_at_end = find_rows_with_semicolon_at_end(txt_content)
+        
+        rows_with_semicolon_at_end = find_rows_with_semicolon_at_end(original_df)
 
         if rows_with_semicolon_at_end:
             st.write("### Replacing Separator in CSV File")
@@ -110,14 +98,6 @@ if input_file and delimiter:
             st.write("### Bereinigte Daten")
             st.dataframe(cleaned_df)
 
-        with st.expander("Analyse", expanded=False):
-            st.write("#### Datenbereinigungsanalyse")
-            st.write(f"Dateikodierung: {encoding}")
-            st.write(f"Ursprüngliche Zeilen: {len(original_df)}, Ursprüngliche Spalten: {original_df.shape[1]}")
-            st.write(f"Bereinigte Zeilen: {len(cleaned_df)}, Bereinigte Spalten: {cleaned_df.shape[1]}")
-            for col, count in space_removal_counts.items():
-                st.write(f"Leerzeichen entfernt in Spalte '{col}': {count}")
-            
         cleaned_csv_buffer = io.StringIO()
         cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=True, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8-sig')
         cleaned_csv_data = cleaned_csv_buffer.getvalue()
