@@ -63,6 +63,19 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None, None, None, None
 
+# Function to compare values and replace separator
+def compare_and_replace_separator(df, compare_columns):
+    for index, row in df.iterrows():
+        for i in range(len(compare_columns) - 1):
+            first_value = row[compare_columns[i]]
+            second_value = row[compare_columns[i + 1]]
+            if is_email_like(first_value) and is_email_like(second_value):
+                row[compare_columns[i + 1]] = second_value.replace(";", ",")
+    return df
+
+def is_email_like(value):
+    return re.match(r"[^@]+@[^@]+\.[^@]+", value)
+
 # Streamlit UI setup
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
