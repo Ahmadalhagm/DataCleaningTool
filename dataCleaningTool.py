@@ -57,7 +57,7 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
 
         if compare_values:
             col1, col2 = compare_values
-            if len(compare_values) == 2 and st.checkbox("Alle Werte vergleichen und Separator ersetzen"):
+            if len(compare_values) == 2:
                 for index, row in df.iterrows():
                     if pd.notna(row[col1]) and pd.notna(row[col2]):
                         if re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', row[col1]) and re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', row[col2]):
@@ -85,12 +85,15 @@ except ValueError:
 remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", ['All Columns'] + column_range, default=[])
 merge_columns_selection = st.multiselect("Wählen Sie zwei oder mehr Spalten zum Zusammenführen aus:", column_range, default=[])
 merge_separator = st.text_input("Geben Sie den Trennzeichen für das Zusammenführen der Spalten ein:", ",")
-compare_values = None
 use_column_names = st.checkbox("Verwenden Sie die erste Zeile als Spaltennamen (falls vorhanden)")
 
-# Display the checkbox only when two columns are selected for comparison
-if len(merge_columns_selection) == 2:
-    compare_values = merge_columns_selection
+# Display the checkbox for comparing values and replacing separators
+compare_values_checkbox = st.checkbox("Alle Werte vergleichen und Separator ersetzen")
+
+compare_values = None
+if compare_values_checkbox:
+    if len(merge_columns_selection) == 2:
+        compare_values = merge_columns_selection
 
 if input_file and delimiter:
     original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, merge_columns_selection, merge_separator, remove_empty_or_space_columns, compare_values, use_column_names)
