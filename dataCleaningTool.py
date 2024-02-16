@@ -18,6 +18,11 @@ def remove_foreign_characters(value):
     new_value = pattern.sub('', value)
     return new_value, ''.join(set(removed_chars))
 
+def is_email_like(value):
+    # Use a simple regex pattern to check if the value resembles an email address
+    pattern = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
+    return bool(pattern.match(value))
+
 def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, merge_separator, remove_empty_or_space_columns, detect_column_names):
     content = input_file.getvalue()
     encoding, content = detect_encoding(content)
@@ -62,23 +67,20 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
         # Logic for comparing and merging email-like values
         for idx, row in df.iterrows():
             for i in range(len(row) - 1):
-                if is_email_like(row[i]) and is_email_like(row[i + 1]):
-                    row[i] = row[i] + ',' + row[i + 1]
-                    row[i + 1] = ''
+                if row[i] is not None and row[i + 1] is not None:
+                    if is_email_like(row[i]) and is_email_like(row[i + 1]):
+                        row[i] = row[i] + ',' + row[i + 1]
+                        row[i + 1] = ''
 
         return original_df, df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding
     except Exception as e:
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None, None, None, None
 
-def is_email_like(text):
-    return re.match(r"[^@]+@[^@]+\.[^@]+", text)
-
 def statistical_analysis(df):
-    # Adjusted statistical analysis to use pandas for skewness and kurtosis
     desc = df.describe()
-    skewness = df.skew()  # Pandas built-in function
-    kurt = df.kurtosis()  # Pandas built-in function
+    skewness = df.skew()
+    kurt = df.kurtosis()
     Q1 = df.quantile(0.25)
     Q3 = df.quantile(0.75)
     IQR = Q3 - Q1
@@ -89,7 +91,7 @@ st.title("CSV- und TXT-Datei bereinigen und analysieren")
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
 delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
 remove_empty_or_space_columns = st.checkbox("Spalten entfernen, wenn alle Werte Leerzeichen oder None sind")
-detect_column_names = st.checkbox("Spaltennamen in erster Zeile erkennen")
+detect_column_names = st.checkbox("Spaltennamen erkennen")
 column_options = "100"
 try:
     max_columns = int(column_options)
@@ -133,7 +135,7 @@ if input_file and delimiter:
                 st.dataframe(outliers)
 
         cleaned_csv_buffer = io.StringIO()
-        cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8-sig')
+        cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=True, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8-sig')
         cleaned_csv_data = cleaned_csv_buffer.getvalue()
         cleaned_csv_buffer.seek(0)
         st.download_button("Bereinigte Daten herunterladen", data=cleaned_csv_data.encode('utf-8-sig'), file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
