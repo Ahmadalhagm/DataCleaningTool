@@ -70,7 +70,8 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
     except Exception as e:
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None, None, None, None
-
+def statistical_analysis():
+    return None
 # Streamlit UI setup
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
