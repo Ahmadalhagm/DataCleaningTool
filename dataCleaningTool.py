@@ -44,7 +44,11 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
 
         if merge_columns:
             merged_column_name = df.columns[min(merge_columns)]
-            df[merged_column_name] = df[merge_columns].astype(str).apply(lambda x: merge_separator.join(x), axis=1)
+            for idx, row in df.iterrows():
+                for i in range(len(row) - 1):
+                    if is_email_like(row[i]) and is_email_like(row[i + 1]):
+                        row[i] = row[i] + merge_separator + row[i + 1]
+                        row[i + 1] = ''
             df.drop(columns=[df.columns[i] for i in merge_columns if i != min(merge_columns)], inplace=True)
 
         space_removal_counts = {}
@@ -63,14 +67,6 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
 
         df.fillna('', inplace=True)
         df.replace('nan', None, inplace=True)
-
-        # Logic for comparing and merging email-like values
-        for idx, row in df.iterrows():
-            for i in range(len(row) - 1):
-                if row[i] is not None and row[i + 1] is not None:
-                    if is_email_like(row[i]) and is_email_like(row[i + 1]):
-                        row[i] = row[i] + ',' + row[i + 1]
-                        row[i + 1] = ''
 
         return original_df, df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding
     except Exception as e:
