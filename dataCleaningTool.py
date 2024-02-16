@@ -57,7 +57,7 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
 
         if compare_columns:
             col1, col2 = compare_columns
-            if st.checkbox("Alle Werte vergleichen und Separator ersetzen"):
+            if len(compare_columns) == 2 and st.checkbox("Alle Werte vergleichen und Separator ersetzen"):
                 for index, row in df.iterrows():
                     if pd.notna(row[col1]) and pd.notna(row[col2]):
                         if re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', row[col1]) and re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', row[col2]):
@@ -70,8 +70,7 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
     except Exception as e:
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None, None, None, None
-def statistical_analysis():
-    return None
+
 # Streamlit UI setup
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
@@ -126,3 +125,4 @@ if input_file and delimiter:
         cleaned_csv_data = cleaned_csv_buffer.getvalue()
         cleaned_csv_buffer.seek(0)
         st.download_button("Bereinigte Daten herunterladen", data=cleaned_csv_data.encode('utf-8-sig'), file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
+
