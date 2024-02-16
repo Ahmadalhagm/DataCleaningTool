@@ -18,7 +18,7 @@ def remove_foreign_characters(value):
     new_value = pattern.sub('', value)
     return new_value, removed_chars
 
-def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, merge_separator, remove_empty_or_space_columns, compare_values, use_column_names):
+def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, merge_separator, remove_empty_or_space_columns, use_column_names):
     content = input_file.getvalue()
     encoding, content = detect_encoding(content)
     try:
@@ -55,14 +55,6 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
             foreign_characters_removed[col] = ''.join(set().union(*removed_chars))
             total_foreign_characters_removed.update(foreign_characters_removed[col])
 
-        if compare_values:
-            col1, col2 = compare_values
-            if len(compare_values) == 2:
-                for index, row in df.iterrows():
-                    if pd.notna(row[col1]) and pd.notna(row[col2]):
-                        if re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', row[col1]) and re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', row[col2]):
-                            df.at[index, merged_column_name] = df.at[index, merged_column_name].replace(merge_separator, ',')
-
         df.fillna('', inplace=True)
         df.replace('nan', None, inplace=True)
 
@@ -87,16 +79,13 @@ merge_columns_selection = st.multiselect("Wählen Sie zwei oder mehr Spalten zum
 merge_separator = st.text_input("Geben Sie den Trennzeichen für das Zusammenführen der Spalten ein:", ",")
 use_column_names = st.checkbox("Verwenden Sie die erste Zeile als Spaltennamen (falls vorhanden)")
 
-# Display the checkbox for comparing values and replacing separators
-compare_values_checkbox = st.checkbox("Alle Werte vergleichen und Separator ersetzen")
-
+compare_values_checkbox = st.checkbox("Werte vergleichen und Separator ersetzen")
 compare_values = None
 if compare_values_checkbox:
-    if len(merge_columns_selection) == 2:
-        compare_values = merge_columns_selection
+    compare_values = merge_columns_selection
 
 if input_file and delimiter:
-    original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, merge_columns_selection, merge_separator, remove_empty_or_space_columns, compare_values, use_column_names)
+    original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, merge_columns_selection, merge_separator, remove_empty_or_space_columns, use_column_names)
     if original_df is not None and cleaned_df is not None:
         st.write("### Vorschau der Originaldaten")
         st.dataframe(original_df.head())
@@ -119,10 +108,16 @@ if input_file and delimiter:
             if not cleaned_df.select_dtypes(include=np.number).empty:
                 st.write("### Erweiterte statistische Analyse für numerische Daten")
                 desc = cleaned_df.describe()
+                skewness = cleaned_df.skew()  # Pandas built-in function
+                kurt = cleaned_df.kurtosis()  # Pandas built-in function
+                Q1 = cleaned_df.quantile(0.25)
+                Q3 = cleaned_df.quantile(0.75)
+                IQR = Q3 - Q1
+                outliers = ((cleaned_df < (Q1 - 1.5 * IQR)) | (cleaned_df > (Q3 + 1.5 * IQR))).sum()
                 st.dataframe(desc)
-
-        cleaned_csv_buffer = io.StringIO()
-        cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8-sig')
-        cleaned_csv_data = cleaned_csv_buffer.getvalue()
-        cleaned_csv_buffer.seek(0)
-        st.download_button("Bereinigte Daten herunterladen", data=cleaned_csv_data.encode('utf-8-sig'), file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
+                st.write("### Schiefe (Skewness)")
+                st.dataframe(skewness)
+                st.write("### Wölbung (Kurtosis)")
+                st.dataframe(kurt)
+                st.write("### Ausreißer (Outliers)")
+                st.dataframe(outliers)
