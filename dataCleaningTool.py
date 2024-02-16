@@ -57,12 +57,12 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
 
         if compare_columns:
             col1, col2 = compare_columns
-            is_email_col1 = df[col1].str.contains(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-            is_email_col2 = df[col2].str.contains(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-            for index, row in df.iterrows():
-                if is_email_col1.iloc[index] and is_email_col2.iloc[index]:
-                    df.at[index, merged_column_name] = df.at[index, merged_column_name].replace(merge_separator, ',')
-        
+            if st.checkbox("Alle Werte vergleichen und Separator ersetzen"):
+                for index, row in df.iterrows():
+                    if pd.notna(row[col1]) and pd.notna(row[col2]):
+                        if re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', row[col1]) and re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', row[col2]):
+                            df.at[index, merged_column_name] = df.at[index, merged_column_name].replace(merge_separator, ',')
+
         df.fillna('', inplace=True)
         df.replace('nan', None, inplace=True)
 
