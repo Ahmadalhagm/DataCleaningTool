@@ -41,7 +41,7 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
             empty_ending_rows = df[df.iloc[:, -1].apply(lambda x: x.strip() == '' or pd.isna(x))].index
             if len(empty_ending_rows) > 0:
                 non_empty_ending_rows = df[~df.index.isin(empty_ending_rows)]
-                merge_rows_selection = st.multiselect("Wählen Sie die Spalten zum Zusammenführen für die ausgewählten Zeilen:", list(non_empty_ending_rows.index))
+                merge_rows_selection = st.multiselect("Wählen Sie die Zeilen zum Zusammenführen für die ausgewählten Spalten:", list(non_empty_ending_rows.index))
                 merge_columns = [col - 1 for col in merge_columns]  # Adjust index
                 merged_column_name = df.columns[min(merge_columns)]
                 merged_values = df.loc[non_empty_ending_rows.index, merge_columns].apply(lambda x: merge_separator.join(x), axis=1)
