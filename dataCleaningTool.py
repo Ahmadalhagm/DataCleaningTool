@@ -12,18 +12,15 @@ def detect_encoding(file_content):
     encoding = result['encoding']
     return encoding, file_content
 
-def remove_foreign_characters(value):
-    pattern = re.compile(r'[^\w\s.,;@#\-_äöüÄÖÜß&]+')
-    removed_chars = pattern.findall(value)
-    new_value = pattern.sub('', value)
-    return new_value, ''.join(set(removed_chars))
-
-def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, merge_separator, remove_empty_or_space_columns):
+def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, merge_separator, remove_empty_or_space_columns, compare_columns, use_column_names):
     content = input_file.getvalue()
     encoding, content = detect_encoding(content)
     try:
         decoded_content = content.decode(encoding)
-        original_df = pd.read_csv(io.StringIO(decoded_content), sep=delimiter, header=None)
+        if use_column_names:
+            original_df = pd.read_csv(io.StringIO(decoded_content), sep=delimiter)
+        else:
+            original_df = pd.read_csv(io.StringIO(decoded_content), sep=delimiter, header=None)
 
         if remove_empty_or_space_columns:
             original_df.replace('', pd.NA, inplace=True)
@@ -52,6 +49,12 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
             foreign_characters_removed[col] = ''.join(set().union(*removed_chars))
             total_foreign_characters_removed.update(foreign_characters_removed[col])
 
+        if compare_columns:
+            col1, col2 = compare_columns
+            is_email_col1 = df[col1].str.contains(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+            is_email_col2 = df[col2].str.contains(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+            df[merged_column_name] = np.where(is_email_col1 & is_email_col2, df[merged_column_name].str.replace(merge_separator, ','), df[merged_column_name])
+
         df.fillna('', inplace=True)
         df.replace('nan', None, inplace=True)
 
@@ -60,17 +63,7 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None, None, None, None
 
-def statistical_analysis(df):
-    # Adjusted statistical analysis to use pandas for skewness and kurtosis
-    desc = df.describe()
-    skewness = df.skew()  # Pandas built-in function
-    kurt = df.kurtosis()  # Pandas built-in function
-    Q1 = df.quantile(0.25)
-    Q3 = df.quantile(0.75)
-    IQR = Q3 - Q1
-    outliers = ((df < (Q1 - 1.5 * IQR)) | (df > (Q3 + 1.5 * IQR))).sum()
-    return desc, skewness, kurt, outliers
-
+# Streamlit UI setup
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
 delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
@@ -84,9 +77,11 @@ except ValueError:
 remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", ['All Columns'] + column_range, default=[])
 merge_columns_selection = st.multiselect("Wählen Sie zwei oder mehr Spalten zum Zusammenführen aus:", column_range, default=[])
 merge_separator = st.text_input("Geben Sie den Trennzeichen für das Zusammenführen der Spalten ein:", ",")
+compare_columns = st.multiselect("Wählen Sie zwei Spalten zum Vergleich aus:", column_range, default=[])
+use_column_names = st.checkbox("Verwenden Sie die erste Zeile als Spaltennamen (falls vorhanden)")
 
 if input_file and delimiter:
-    original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, merge_columns_selection, merge_separator, remove_empty_or_space_columns)
+    original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, merge_columns_selection, merge_separator, remove_empty_or_space_columns, compare_columns, use_column_names)
     if original_df is not None and cleaned_df is not None:
         st.write("### Vorschau der Originaldaten")
         st.dataframe(original_df.head())
