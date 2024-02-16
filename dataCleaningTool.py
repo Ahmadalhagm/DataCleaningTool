@@ -59,8 +59,10 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
             col1, col2 = compare_columns
             is_email_col1 = df[col1].str.contains(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
             is_email_col2 = df[col2].str.contains(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
-            df[merged_column_name] = np.where(is_email_col1 & is_email_col2, df[merged_column_name].str.replace(merge_separator, ','), df[merged_column_name])
-
+            for index, row in df.iterrows():
+                if is_email_col1.iloc[index] and is_email_col2.iloc[index]:
+                    df.at[index, merged_column_name] = df.at[index, merged_column_name].replace(merge_separator, ',')
+        
         df.fillna('', inplace=True)
         df.replace('nan', None, inplace=True)
 
