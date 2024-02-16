@@ -16,17 +16,14 @@ def remove_foreign_characters(value):
     pattern = re.compile(r'[^\w\s.,;@#\-_äöüÄÖÜß&]+')
     removed_chars = pattern.findall(value)
     new_value = pattern.sub('', value)
-    return new_value, removed_chars
+    return new_value, ''.join(set(removed_chars))
 
-def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, merge_separator, remove_empty_or_space_columns, use_column_names):
+def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, merge_separator, remove_empty_or_space_columns):
     content = input_file.getvalue()
     encoding, content = detect_encoding(content)
     try:
         decoded_content = content.decode(encoding)
-        if use_column_names:
-            original_df = pd.read_csv(io.StringIO(decoded_content), sep=delimiter)
-        else:
-            original_df = pd.read_csv(io.StringIO(decoded_content), sep=delimiter, header=None)
+        original_df = pd.read_csv(io.StringIO(decoded_content), sep=delimiter, header=None)
 
         if remove_empty_or_space_columns:
             original_df.replace('', pd.NA, inplace=True)
@@ -58,26 +55,37 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
         df.fillna('', inplace=True)
         df.replace('nan', None, inplace=True)
 
+        # Checkbox for comparing email-like values and replacing separator
+        compare_email_values = st.checkbox("Vergleichen und Separator ersetzen für Email-ähnliche Werte")
+
+        # Logic to compare and replace separator for email-like values
+        if compare_email_values:
+            for col in df.columns:
+                if df[col].dtype == 'object':
+                    df[col] = df[col].str.replace(r'([^;]+@[^;]+);([^;]+@[^;]+)', r'\1,\2', regex=True)
+
         return original_df, df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding
     except Exception as e:
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None, None, None, None
 
-# Function to compare values and replace separator
-def compare_and_replace_separator(df, compare_columns):
-    for index, row in df.iterrows():
-        for i in range(len(compare_columns) - 1):
-            first_value = row[compare_columns[i]]
-            second_value = row[compare_columns[i + 1]]
-            if is_email_like(first_value) and is_email_like(second_value):
-                row[compare_columns[i + 1]] = second_value.replace(";", ",")
-    return df
+def remove_foreign_characters(value):
+    if isinstance(value, str):
+        # Remove foreign characters except spaces and German umlauts
+        return re.sub(r'[^\w\s.,;@#\-_äöüÄÖÜß&]+', '', value)
+    return value
 
-def is_email_like(value):
-    # Use a broader regular expression pattern to match email-like values
-    return re.match(r"[^@\s]+@[^@\s]+\.[a-zA-Z0-9]+$", value)
+def statistical_analysis(df):
+    # Adjusted statistical analysis to use pandas for skewness and kurtosis
+    desc = df.describe()
+    skewness = df.skew()  # Pandas built-in function
+    kurt = df.kurtosis()  # Pandas built-in function
+    Q1 = df.quantile(0.25)
+    Q3 = df.quantile(0.75)
+    IQR = Q3 - Q1
+    outliers = ((df < (Q1 - 1.5 * IQR)) | (df > (Q3 + 1.5 * IQR))).sum()
+    return desc, skewness, kurt, outliers
 
-# Streamlit UI setup
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
 delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
@@ -91,20 +99,14 @@ except ValueError:
 remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", ['All Columns'] + column_range, default=[])
 merge_columns_selection = st.multiselect("Wählen Sie zwei oder mehr Spalten zum Zusammenführen aus:", column_range, default=[])
 merge_separator = st.text_input("Geben Sie den Trennzeichen für das Zusammenführen der Spalten ein:", ",")
-use_column_names = st.checkbox("Verwenden Sie die erste Zeile als Spaltennamen (falls vorhanden)")
-
-compare_values_checkbox = st.checkbox("Werte vergleichen und Separator ersetzen")
-compare_values = None
-if compare_values_checkbox:
-    compare_values = merge_columns_selection
 
 if input_file and delimiter:
-    original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, merge_columns_selection, merge_separator, remove_empty_or_space_columns, use_column_names)
+    original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, merge_columns_selection, merge_separator, remove_empty_or_space_columns)
     if original_df is not None and cleaned_df is not None:
         st.write("### Vorschau der Originaldaten")
-        st.dataframe(original_df)
+        st.dataframe(original_df.head())
         st.write("### Vorschau der bereinigten Daten")
-        st.dataframe(cleaned_df)
+        st.dataframe(cleaned_df.head())
         
         with st.expander("Analyse", expanded=False):
             st.write("#### Datenbereinigungsanalyse")
@@ -129,12 +131,10 @@ if input_file and delimiter:
                 st.dataframe(kurt)
                 st.write("### Ausreißer (Outliers)")
                 st.dataframe(outliers)
-        
-        if compare_values:
-            cleaned_df = compare_and_replace_separator(cleaned_df, compare_values)
 
         cleaned_csv_buffer = io.StringIO()
         cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8-sig')
         cleaned_csv_data = cleaned_csv_buffer.getvalue()
         cleaned_csv_buffer.seek(0)
         st.download_button("Bereinigte Daten herunterladen", data=cleaned_csv_data.encode('utf-8-sig'), file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
+
