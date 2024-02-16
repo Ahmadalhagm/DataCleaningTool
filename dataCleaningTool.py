@@ -22,16 +22,12 @@ def is_email_like(value):
     pattern = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
     return bool(pattern.match(value))
 
-def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, merge_separator, remove_empty_or_space_columns, detect_column_names):
+def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, merge_separator, remove_empty_or_space_columns, correct_misinterpretation):
     content = input_file.getvalue()
     encoding, content = detect_encoding(content)
     try:
         decoded_content = content.decode(encoding)
         original_df = pd.read_csv(io.StringIO(decoded_content), sep=delimiter, header=None)
-
-        if detect_column_names:
-            original_df.columns = original_df.iloc[0]
-            original_df = original_df.drop(original_df.index[0])
 
         if remove_empty_or_space_columns:
             original_df.replace('', pd.NA, inplace=True)
@@ -41,11 +37,15 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
         original_df = original_df.astype(str)
         df = original_df.copy()
 
+        if correct_misinterpretation:
+            for idx, row in df.iterrows():
+                for i in range(len(row) - 1):
+                    if row[i] and row[i + 1] and is_email_like(row[i]) and is_email_like(row[i + 1]):
+                        row[i] = row[i] + ',' + row[i + 1]
+                        row[i + 1] = ''
+
         if merge_columns:
-            if detect_column_names:
-                merge_columns = [col for col in merge_columns if col < len(df.columns)]
-            else:
-                merge_columns = [col - 1 for col in merge_columns]  # Adjust index if no column names detected
+            merge_columns = [col - 1 for col in merge_columns]  # Adjust index
             merged_column_name = df.columns[min(merge_columns)]
             merged_values = df[merge_columns].apply(lambda x: merge_separator.join(x), axis=1)
             df[merged_column_name] = merged_values
@@ -87,7 +87,7 @@ st.title("CSV- und TXT-Datei bereinigen und analysieren")
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
 delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
 remove_empty_or_space_columns = st.checkbox("Spalten entfernen, wenn alle Werte Leerzeichen oder None sind")
-detect_column_names = st.checkbox("Spaltennamen erkennen")
+correct_misinterpretation = st.checkbox("Korrekte Fehlinterpretationen")
 column_options = "100"
 try:
     max_columns = int(column_options)
@@ -99,7 +99,7 @@ merge_columns_selection = st.multiselect("Wählen Sie zwei oder mehr Spalten zum
 merge_separator = st.text_input("Geben Sie den Trennzeichen für das Zusammenführen der Spalten ein:", ",")
 
 if input_file and delimiter:
-    original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, merge_columns_selection, merge_separator, remove_empty_or_space_columns, detect_column_names)
+    original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, merge_columns_selection, merge_separator, remove_empty_or_space_columns, correct_misinterpretation)
     if original_df is not None and cleaned_df is not None:
         st.write("### Vorschau der Originaldaten")
         st.dataframe(original_df)
