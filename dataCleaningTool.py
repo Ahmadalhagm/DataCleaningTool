@@ -16,7 +16,7 @@ def remove_foreign_characters(value):
     pattern = re.compile(r'[^\w\s.,;@#\-_äöüÄÖÜß&]+')
     removed_chars = pattern.findall(value)
     new_value = pattern.sub('', value)
-    return new_value, ''.join(set(removed_chars))
+    return new_value, removed_chars
 
 def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, merge_separator, remove_empty_or_space_columns, compare_columns, use_column_names):
     content = input_file.getvalue()
