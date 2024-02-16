@@ -23,14 +23,6 @@ def is_email_like(value):
     pattern = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
     return bool(pattern.match(value))
 
-def compare_and_merge_emails(df):
-    for idx, row in df.iterrows():
-        for i in range(len(row) - 1):
-            if is_email_like(row[i]) and is_email_like(row[i + 1]):
-                row[i] = row[i] + ',' + row[i + 1]
-                row[i + 1] = ''
-    return df
-
 def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, merge_separator, remove_empty_or_space_columns, detect_column_names):
     content = input_file.getvalue()
     encoding, content = detect_encoding(content)
@@ -72,7 +64,13 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
         df.fillna('', inplace=True)
         df.replace('nan', None, inplace=True)
 
-        df = compare_and_merge_emails(df)
+        # Logic for comparing and merging email-like values
+        for idx, row in df.iterrows():
+            for i in range(len(row) - 1):
+                if row[i] is not None and row[i + 1] is not None:
+                    if is_email_like(row[i]) and is_email_like(row[i + 1]):
+                        row[i] = row[i] + ',' + row[i + 1]
+                        row[i + 1] = ''
 
         return original_df, df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding
     except Exception as e:
@@ -108,9 +106,9 @@ if input_file and delimiter:
     original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, merge_columns_selection, merge_separator, remove_empty_or_space_columns, detect_column_names)
     if original_df is not None and cleaned_df is not None:
         st.write("### Vorschau der Originaldaten")
-        st.dataframe(original_df.head())
+        st.dataframe(original_df)
         st.write("### Vorschau der bereinigten Daten")
-        st.dataframe(cleaned_df.head())
+        st.dataframe(cleaned_df)
         
         with st.expander("Analyse", expanded=False):
             st.write("#### Datenbereinigungsanalyse")
