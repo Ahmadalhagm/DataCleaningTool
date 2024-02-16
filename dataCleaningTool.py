@@ -59,19 +59,20 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
         df.fillna('', inplace=True)
         df.replace('nan', None, inplace=True)
 
-        # Checkbox for comparing email-like values and replacing separator
-        compare_email_values = st.checkbox("Vergleichen und Separator ersetzen für Email-ähnliche Werte")
-
-        # Logic to compare and replace separator for email-like values
-        if compare_email_values:
-            for col in df.columns:
-                if df[col].dtype == 'object':
-                    df[col] = df[col].str.replace(r'([^;]+@[^;]+);([^;]+@[^;]+)', r'\1,\2', regex=True)
+        # Logic for comparing and merging email-like values
+        for idx, row in df.iterrows():
+            for i in range(len(row) - 1):
+                if is_email_like(row[i]) and is_email_like(row[i + 1]):
+                    row[i] = row[i] + ',' + row[i + 1]
+                    row[i + 1] = ''
 
         return original_df, df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding
     except Exception as e:
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None, None, None, None
+
+def is_email_like(text):
+    return re.match(r"[^@]+@[^@]+\.[^@]+", text)
 
 def statistical_analysis(df):
     # Adjusted statistical analysis to use pandas for skewness and kurtosis
@@ -103,9 +104,9 @@ if input_file and delimiter:
     original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, merge_columns_selection, merge_separator, remove_empty_or_space_columns, detect_column_names)
     if original_df is not None and cleaned_df is not None:
         st.write("### Vorschau der Originaldaten")
-        st.dataframe(original_df.head())
+        st.dataframe(original_df)
         st.write("### Vorschau der bereinigten Daten")
-        st.dataframe(cleaned_df.head())
+        st.dataframe(cleaned_df)
         
         with st.expander("Analyse", expanded=False):
             st.write("#### Datenbereinigungsanalyse")
