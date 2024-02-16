@@ -42,6 +42,8 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
         df = original_df.copy()
 
         if merge_columns:
+            if detect_column_names:
+                merge_columns = [col for col in merge_columns if col < len(df.columns)]
             merged_column_name = df.columns[min(merge_columns)]
             merged_values = df[merge_columns].apply(lambda x: merge_separator.join(x), axis=1)
             df[merged_column_name] = merged_values
