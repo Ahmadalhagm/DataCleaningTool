@@ -69,12 +69,6 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None, None, None, None
 
-def remove_foreign_characters(value):
-    if isinstance(value, str):
-        # Remove foreign characters except spaces and German umlauts
-        return re.sub(r'[^\w\s.,;@#\-_äöüÄÖÜß&]+', '', value)
-    return value
-
 def statistical_analysis(df):
     # Adjusted statistical analysis to use pandas for skewness and kurtosis
     desc = df.describe()
