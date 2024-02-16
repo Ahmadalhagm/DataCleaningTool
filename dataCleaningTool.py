@@ -44,9 +44,8 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
                 merge_rows_selection = st.multiselect("Wählen Sie die Spalten zum Zusammenführen für die ausgewählten Zeilen:", list(non_empty_ending_rows.index))
                 merge_columns = [col - 1 for col in merge_columns]  # Adjust index
                 merged_column_name = df.columns[min(merge_columns)]
-                merged_values = df[merge_columns].apply(lambda x: merge_separator.join(x), axis=1)
-                non_null_mask = df[merge_columns].apply(lambda row: not row.isnull().any(), axis=1)
-                df.loc[non_null_mask, merged_column_name] = merged_values[non_null_mask]
+                merged_values = df.loc[non_empty_ending_rows.index, merge_columns].apply(lambda x: merge_separator.join(x), axis=1)
+                df.loc[non_empty_ending_rows.index, merged_column_name] = merged_values
                 df.drop(columns=[df.columns[i] for i in merge_columns if i != min(merge_columns)], inplace=True)
 
         space_removal_counts = {}
