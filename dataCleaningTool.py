@@ -51,13 +51,23 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
         st.error(f"Ein Fehler ist aufgetreten: {e}")
         return None, None, None, None
 
-def find_rows_without_semicolon_at_end(df):
-    rows_without_semicolon_at_end = []
-    if not df.empty:
-        for idx, row in df.iterrows():
-            if not row.iloc[-1].endswith(';'):
-                rows_without_semicolon_at_end.append(idx)
-    return rows_without_semicolon_at_end
+def convert_csv_to_txt(input_file):
+    content = input_file.getvalue()
+    with open("temp_file.csv", "wb") as f:
+        f.write(content)
+    os.system("csvtotxt temp_file.csv temp_file.txt")
+    with open("temp_file.txt", "r") as f:
+        txt_content = f.readlines()
+    os.remove("temp_file.csv")
+    os.remove("temp_file.txt")
+    return txt_content
+
+def find_rows_with_semicolon_at_end(txt_content):
+    rows_with_semicolon_at_end = []
+    for idx, line in enumerate(txt_content):
+        if line.strip().endswith(';'):
+            rows_with_semicolon_at_end.append(idx)
+    return rows_with_semicolon_at_end
 
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
@@ -82,13 +92,21 @@ if input_file and delimiter:
         st.write("### Vorschau der bereinigten Daten")
         st.dataframe(cleaned_df.head())
         
-        rows_without_semicolon_at_end = find_rows_without_semicolon_at_end(cleaned_df)
-        if rows_without_semicolon_at_end:
-            st.write("### Zeilen ohne Semikolon am Ende")
-            for row_idx in rows_without_semicolon_at_end:
-                st.write(f"Zeile {row_idx + 1}: {'; '.join(cleaned_df.iloc[row_idx])}")
-                col_to_replace_separator = st.selectbox("Wählen Sie die Spalte, in der der Separator ersetzt werden soll:", cleaned_df.columns)
-                cleaned_df[col_to_replace_separator] = cleaned_df[col_to_replace_separator].str.replace(';', ',')
+        with st.expander("Analyse", expanded=False):
+            st.write("#### Datenbereinigungsanalyse")
+            st.write(f"Dateikodierung: {encoding}")
+            st.write(f"Ursprüngliche Zeilen: {len(original_df)}, Ursprüngliche Spalten: {original_df.shape[1]}")
+            st.write(f"Bereinigte Zeilen: {len(cleaned_df)}, Bereinigte Spalten: {cleaned_df.shape[1]}")
+            for col, count in space_removal_counts.items():
+                st.write(f"Leerzeichen entfernt in Spalte '{col}': {count}")
+
+        txt_content = convert_csv_to_txt(input_file)
+        rows_with_semicolon_at_end = find_rows_with_semicolon_at_end(txt_content)
+
+        if rows_with_semicolon_at_end:
+            st.write("### Replacing Separator in CSV File")
+            col_to_replace_separator = st.selectbox("Wählen Sie die Spalte aus, deren Separator mit einem Komma ersetzt werden soll:", cleaned_df.columns)
+            cleaned_df.iloc[rows_with_semicolon_at_end, col_to_replace_separator] = cleaned_df[col_to_replace_separator].str.replace(';', ',')
             st.write("### Bereinigte Daten")
             st.dataframe(cleaned_df)
 
