@@ -41,12 +41,12 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
             empty_ending_rows = df[df.iloc[:, -1].apply(lambda x: x.strip() == '' or pd.isna(x))].index
             if len(empty_ending_rows) > 0:
                 non_empty_ending_rows = df[~df.index.isin(empty_ending_rows)]
-                merge_rows_selection = st.multiselect("Wählen Sie die Zeilen zum Zusammenführen für die ausgewählten Spalten:", list(non_empty_ending_rows.index))
-                merge_columns = [col - 1 for col in merge_columns]  # Adjust index
-                merged_column_name = df.columns[min(merge_columns)]
-                merged_values = df.loc[non_empty_ending_rows.index, merge_columns].apply(lambda x: merge_separator.join(x), axis=1)
+                # Use merge_columns_selection instead of merge_columns
+                merged_column_name = df.columns[min(merge_columns_selection)]
+                merged_values = df.loc[non_empty_ending_rows.index, merge_columns_selection].apply(lambda x: merge_separator.join(x), axis=1)
                 df.loc[non_empty_ending_rows.index, merged_column_name] = merged_values
-                df.drop(columns=[df.columns[i] for i in merge_columns if i != min(merge_columns)], inplace=True)
+                # Drop all columns except the one that has been merged
+                df.drop(columns=[col for col in df.columns if col != merged_column_name], inplace=True)
 
         space_removal_counts = {}
         foreign_characters_removed = {}
