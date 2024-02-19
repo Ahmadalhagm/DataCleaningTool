@@ -33,9 +33,7 @@ def process_file(input_file, delimiter, remove_spaces_columns, remove_empty_or_s
         original_df = original_df.astype(str)
         df = original_df.copy()
 
-        none_count = 0
-        if correct_misinterpretation:
-            none_count = len(df[df.iloc[:, -1] == 'None'])
+        none_count = df.isna().sum().sum()
 
         space_removal_counts = {}
         foreign_characters_removed = {}
@@ -52,7 +50,6 @@ def process_file(input_file, delimiter, remove_spaces_columns, remove_empty_or_s
             total_foreign_characters_removed.update(foreign_characters_removed[col])
 
         df.fillna('', inplace=True)
-        df.replace('nan', None, inplace=True)
 
         return original_df, df, none_count, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding
     except Exception as e:
@@ -93,11 +90,11 @@ if input_file and delimiter:
         with st.expander("Analyse", expanded=False):
             st.write("#### Datenbereinigungsanalyse")
             st.write(f"Dateikodierung: {encoding}")
-            st.write(f"Ursprüngliche Zeilen: {len(original_df)}, Ursprüngliche Spalten: {original_df.shape[1]}")
-            st.write(f"Bereinigte Zeilen: {len(cleaned_df)}, Bereinigte Spalten: {cleaned_df.shape[1]}")
+            st.write(f"Ursprüngliche Zeilen: {original_df.shape[0]}, Ursprüngliche Spalten: {original_df.shape[1]}")
+            st.write(f"Bereinigte Zeilen: {cleaned_df.shape[0]}, Bereinigte Spalten: {cleaned_df.shape[1]}")
+            st.write(f"Anzahl der 'None' in den bereinigten Daten: {none_count}")
             for col, count in space_removal_counts.items():
                 st.write(f"Leerzeichen entfernt in Spalte '{col}': {count}")
-            st.write(f"Anzahl der Zeilen mit 'None' am Ende: {none_count}")
             st.write(f"Entfernte fremde Zeichen: {', '.join(total_foreign_characters_removed)}")
             for col, chars in foreign_characters_removed.items():
                 if chars:
