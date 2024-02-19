@@ -126,7 +126,6 @@ if input_file and delimiter:
                 st.dataframe(kurt)
                 st.write("### Ausreißer (Outliers)")
                 st.dataframe(outliers)
-
         cleaned_csv_buffer = io.StringIO()
         cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=True, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8-sig')
         cleaned_csv_data = cleaned_csv_buffer.getvalue()
