@@ -49,7 +49,8 @@ def process_file(input_file, delimiter, remove_spaces_columns, remove_empty_or_s
             foreign_characters_removed[col] = ''.join(set().union(*removed_chars))
             total_foreign_characters_removed.update(foreign_characters_removed[col])
 
-        df.fillna('', inplace=True)
+        df.replace('nan', None, inplace=True)
+        df.dropna(inplace=True)
 
         return original_df, df, none_count, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding
     except Exception as e:
