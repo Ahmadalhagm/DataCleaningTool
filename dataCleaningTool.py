@@ -18,7 +18,7 @@ def remove_foreign_characters(value):
     new_value = pattern.sub('', value)
     return new_value, ''.join(set(removed_chars))
 
-def process_file(input_file, delimiter, remove_spaces_columns, remove_empty_or_space_columns, correct_misinterpretation):
+def process_file(input_file, delimiter, remove_spaces_columns, remove_empty_or_space_columns, correct_misinterpretation, merge_columns_selection):
     content = input_file.getvalue()
     encoding, content = detect_encoding(content)
     try:
@@ -76,7 +76,7 @@ st.title("CSV- und TXT-Datei bereinigen und analysieren")
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
 delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
 remove_empty_or_space_columns = st.checkbox("Spalten entfernen, wenn alle Werte Leerzeichen oder None sind")
-correct_misinterpretation = st.checkbox("Korrekte Fehlinterpretationen")
+correct_misinterpretation = st.checkbox("Fehlintpretationen korrigieren")
 column_options = "100"
 try:
     max_columns = int(column_options)
@@ -85,8 +85,14 @@ except ValueError:
     st.error("Bitte geben Sie eine gültige Zahl ein.")
 remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", ['All Columns'] + column_range, default=[])
 
+if correct_misinterpretation:
+    merge_columns_selection = st.multiselect("Wählen Sie zwei oder mehr Spalten zum Zusammenführen aus:", column_range, default=[])
+    if len(merge_columns_selection) < 2:
+        st.warning("Bitte wählen Sie mindestens zwei Spalten zum Zusammenführen aus.")
+        st.stop()
+
 if input_file and delimiter:
-    original_df, cleaned_df, none_count, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, remove_empty_or_space_columns, correct_misinterpretation)
+    original_df, cleaned_df, none_count, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, remove_empty_or_space_columns, correct_misinterpretation, merge_columns_selection)
     if original_df is not None and cleaned_df is not None:
         st.write("### Vorschau der Originaldaten")
         st.dataframe(original_df)
