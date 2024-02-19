@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import chardet
 import io
+import re
 import csv
 
 def detect_encoding(file_content):
@@ -11,11 +12,11 @@ def detect_encoding(file_content):
     return encoding, file_content
 
 def remove_foreign_characters(value):
-    if pd.isna(value):
-        return value, ''
+    if isinstance(value, float) and np.isnan(value):
+        return "", ""
     pattern = re.compile(r'[^\w\s.,;@#\-_äöüÄÖÜß&]+')
-    removed_chars = pattern.findall(value)
-    new_value = pattern.sub('', value)
+    removed_chars = pattern.findall(str(value))
+    new_value = pattern.sub('', str(value))
     return new_value, ''.join(set(removed_chars))
 
 def process_file(input_file, delimiter, remove_spaces_columns, merge_columns_selection, merge_separator, remove_empty_or_space_columns, correct_misinterpretation):
@@ -24,43 +25,57 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns_sel
     file_size_before = len(content)
     try:
         decoded_content = content.decode(encoding_before)
-        df = pd.read_csv(io.StringIO(decoded_content), sep=delimiter, header=None, dtype=str)
+        original_df = pd.read_csv(io.StringIO(decoded_content), sep=delimiter, header=None, dtype=str)
+        df = original_df.copy()
+
+        # Initial DataFrame statistics
         original_rows, original_columns = df.shape
 
+        # Cleaning summary initialization
         cleaning_summary = {
             'spaces_removed': 0,
-            'foreign_characters_removed': set(),
-            'empty_columns_removed': original_columns - df.dropna(axis=1, how='all').shape[1],
+            'foreign_characters_removed': [],
+            'empty_columns_removed': 0,
+            'rows_with_nan_at_end': 0,
             'encoding_before': encoding_before,
             'file_size_before_kb': file_size_before / 1024,
-            'rows_with_nan_at_end': sum(df.iloc[:, -1].isna() | df.iloc[:, -1].apply(lambda x: x.strip() in ('', 'None', 'nan'))),
         }
 
-        # Convert columns for space removal to integers
-        remove_spaces_columns = [int(col) - 1 for col in remove_spaces_columns if col.isdigit()]
+        if remove_empty_or_space_columns:
+            columns_before = df.shape[1]
+            df.replace(r'^\s*$', np.nan, regex=True, inplace=True)
+            df.dropna(axis=1, how='all', inplace=True)
+            columns_after = df.shape[1]
+            cleaning_summary['empty_columns_removed'] = columns_before - columns_after
 
-        # Remove spaces
-        for col in remove_spaces_columns:
-            original_len = df.iloc[:, col].str.len().sum()
-            df.iloc[:, col] = df.iloc[:, col].replace(np.nan, '').replace('\s+', ' ', regex=True)
-            new_len = df.iloc[:, col].str.len().sum()
-            cleaning_summary['spaces_removed'] += (original_len - new_len)
-
-        # Remove foreign characters
+        # Remove spaces and foreign characters
         for col in df.columns:
+            if 'All Columns' in remove_spaces_columns or int(col) in [int(x.strip()) for x in remove_spaces_columns.split(',')]:
+                df[col] = df[col].apply(lambda x: x.replace(' ', '') if isinstance(x, str) else x)
+                cleaning_summary['spaces_removed'] += 1
+
             df[col], removed_chars = zip(*df[col].apply(remove_foreign_characters))
-            cleaning_summary['foreign_characters_removed'].update(removed_chars)
+            cleaning_summary['foreign_characters_removed'].extend(removed_chars)
+
+        cleaning_summary['foreign_characters_removed'] = list(set([char for sublist in cleaning_summary['foreign_characters_removed'] for char in sublist]))
 
         # Merging columns
-        merge_columns = [int(x) - 1 for x in merge_columns_selection.split(',') if x.isdigit()]
+        merge_columns = [int(x.strip()) - 1 for x in merge_columns_selection.split(',') if x.strip().isdigit()]
         if merge_columns and len(merge_columns) >= 2:
             col1, col2 = merge_columns[:2]
             df.iloc[:, col1] = df.iloc[:, col1].astype(str) + merge_separator + df.iloc[:, col2].astype(str)
-            df.drop(columns=[col2], inplace=True)
+            df.drop(df.columns[col2], axis=1, inplace=True)
 
-        # Final cleaning summary updates
-        file_size_after = df.memory_usage(deep=True).sum()
+        # File size after cleaning
+        file_size_after = sum(df.memory_usage(deep=True))
         cleaning_summary['file_size_after_kb'] = file_size_after / 1024
+
+        # Encoding remains unchanged
+        cleaning_summary['encoding_after'] = encoding_before
+
+        # Final DataFrame statistics
+        cleaning_summary['rows_before'] = original_rows
+        cleaning_summary['columns_before'] = original_columns
         cleaning_summary['rows_after'] = df.shape[0]
         cleaning_summary['columns_after'] = df.shape[1]
 
@@ -69,7 +84,7 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns_sel
         st.error(f"An error occurred: {e}")
         return None, None
 
-# Streamlit UI
+# Streamlit UI components for input
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
 
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
@@ -80,8 +95,8 @@ merge_columns_selection = st.text_input("Geben Sie die Spaltenindizes für das Z
 merge_separator = st.text_input("Geben Sie den Trennzeichen für das Zusammenführen der Spalten ein:", ",")
 correct_misinterpretation = st.checkbox("Korrekte Fehlinterpretationen")
 
-if input_file and delimiter:
-    cleaned_df, cleaning_summary = process_file(input_file, delimiter, remove_spaces_columns.split(','), merge_columns_selection, merge_separator, remove_empty_or_space_columns, correct_misinterpretation)
+if input_file is not None and delimiter:
+    cleaned_df, cleaning_summary = process_file(input_file, delimiter, remove_spaces_columns, merge_columns_selection, merge_separator, remove_empty_or_space_columns, correct_misinterpretation)
     if cleaned_df is not None:
         st.write("### Cleaning Summary")
         for key, value in cleaning_summary.items():
