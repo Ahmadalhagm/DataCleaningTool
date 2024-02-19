@@ -35,10 +35,8 @@ def process_file(input_file, delimiter, remove_spaces_columns, remove_empty_or_s
 
         none_count = 0
         if correct_misinterpretation:
-            # Create a matrix to mirror the dataframe
-            matrix = df.applymap(lambda x: 1 if x != 'None' else 0)
-            # Count the number of zeros
-            none_count = matrix.apply(lambda x: x.eq(0).sum(), axis=1).sum()
+            # Count the number of rows with 'None' in the last column
+            none_count = df.iloc[:, -1].apply(lambda x: 1 if x.lower() == 'none' else 0).sum()
 
         space_removal_counts = {}
         foreign_characters_removed = {}
