@@ -85,6 +85,8 @@ except ValueError:
     st.error("Bitte geben Sie eine gültige Zahl ein.")
 remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", ['All Columns'] + column_range, default=[])
 
+merge_columns_selection = []
+
 if correct_misinterpretation:
     merge_columns_selection = st.multiselect("Wählen Sie zwei oder mehr Spalten zum Zusammenführen aus:", column_range, default=[])
     if len(merge_columns_selection) < 2:
