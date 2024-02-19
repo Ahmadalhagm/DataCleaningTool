@@ -18,7 +18,7 @@ def remove_foreign_characters(value):
     new_value = pattern.sub('', value)
     return new_value, ''.join(set(removed_chars))
 
-def process_file(input_file, delimiter, remove_spaces_columns, remove_empty_or_space_columns, correct_misinterpretation, merge_columns_selection):
+def process_file(input_file, delimiter, remove_spaces_columns, remove_empty_or_space_columns):
     content = input_file.getvalue()
     encoding, content = detect_encoding(content)
     try:
@@ -32,11 +32,6 @@ def process_file(input_file, delimiter, remove_spaces_columns, remove_empty_or_s
 
         original_df = original_df.astype(str)
         df = original_df.copy()
-
-        none_count = 0
-        if correct_misinterpretation:
-            # Count the number of rows with 'None' in the last column
-            none_count = df.iloc[:, -1].apply(lambda x: 1 if x.lower() == 'none' else 0).sum()
 
         space_removal_counts = {}
         foreign_characters_removed = {}
@@ -55,10 +50,14 @@ def process_file(input_file, delimiter, remove_spaces_columns, remove_empty_or_s
         df.fillna('', inplace=True)
         df.replace('nan', None, inplace=True)
 
-        return original_df, df, none_count, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding
+        return original_df, df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding
     except Exception as e:
         st.error(f"Ein Fehler ist aufgetreten: {e}")
-        return None, None, None, None, None, None, None
+        return None, None, None, None, None, None
+
+def merge_values(df, merge_column, merge_rows):
+    merged_values = df.loc[merge_rows, merge_column].str.cat(sep=' ')
+    return merged_values
 
 def statistical_analysis(df):
     desc = df.describe()
@@ -74,25 +73,9 @@ st.title("CSV- und TXT-Datei bereinigen und analysieren")
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
 delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
 remove_empty_or_space_columns = st.checkbox("Spalten entfernen, wenn alle Werte Leerzeichen oder None sind")
-correct_misinterpretation = st.checkbox("Fehlintpretationen korrigieren")
-column_options = "100"
-try:
-    max_columns = int(column_options)
-    column_range = list(range(max_columns))
-except ValueError:
-    st.error("Bitte geben Sie eine gültige Zahl ein.")
-remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", ['All Columns'] + column_range, default=[])
-
-merge_columns_selection = []
-
-if correct_misinterpretation:
-    merge_columns_selection = st.multiselect("Wählen Sie zwei oder mehr Spalten zum Zusammenführen aus:", column_range, default=[])
-    if len(merge_columns_selection) < 2:
-        st.warning("Bitte wählen Sie mindestens zwei Spalten zum Zusammenführen aus.")
-        st.stop()
 
 if input_file and delimiter:
-    original_df, cleaned_df, none_count, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, remove_empty_or_space_columns, correct_misinterpretation, merge_columns_selection)
+    original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_empty_or_space_columns)
     if original_df is not None and cleaned_df is not None:
         st.write("### Vorschau der Originaldaten")
         st.dataframe(original_df)
@@ -104,7 +87,8 @@ if input_file and delimiter:
             st.write(f"Dateikodierung: {encoding}")
             st.write(f"Ursprüngliche Zeilen: {len(original_df)}, Ursprüngliche Spalten: {original_df.shape[1]}")
             st.write(f"Bereinigte Zeilen: {len(cleaned_df)}, Bereinigte Spalten: {cleaned_df.shape[1]}")
-            st.write(f"Anzahl der Zeilen mit 'None' am Ende: {none_count}")
+            for col, count in space_removal_counts.items():
+                st.write(f"Leerzeichen entfernt in Spalte '{col}': {count}")
             st.write(f"Entfernte fremde Zeichen: {', '.join(total_foreign_characters_removed)}")
             for col, chars in foreign_characters_removed.items():
                 if chars:
@@ -121,6 +105,14 @@ if input_file and delimiter:
                 st.dataframe(kurt)
                 st.write("### Ausreißer (Outliers)")
                 st.dataframe(outliers)
+
+        if st.button("Zusammenführen"):
+            merge_column = st.selectbox("Wählen Sie die Spalte zum Zusammenführen:", cleaned_df.columns)
+            merge_rows = st.multiselect("Wählen Sie die Zeilen zum Zusammenführen aus:", cleaned_df.index)
+            if merge_column and merge_rows:
+                merged_values = merge_values(cleaned_df, merge_column, merge_rows)
+                st.write("Zusammengeführte Werte:", merged_values)
+
         cleaned_csv_buffer = io.StringIO()
         cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8-sig')
         cleaned_csv_data = cleaned_csv_buffer.getvalue()
