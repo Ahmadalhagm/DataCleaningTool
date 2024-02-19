@@ -18,11 +18,7 @@ def remove_foreign_characters(value):
     new_value = pattern.sub('', value)
     return new_value, ''.join(set(removed_chars))
 
-def is_email_like(value):
-    pattern = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z9.-]+\.[A-Z|a-z]{2,}\b')
-    return bool(pattern.match(value))
-
-def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, merge_separator, remove_empty_or_space_columns, correct_misinterpretation):
+def process_file(input_file, delimiter, remove_spaces_columns, remove_empty_or_space_columns, correct_misinterpretation):
     content = input_file.getvalue()
     encoding, content = detect_encoding(content)
     try:
@@ -37,16 +33,9 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
         original_df = original_df.astype(str)
         df = original_df.copy()
 
+        none_count = 0
         if correct_misinterpretation:
-            empty_ending_rows = df[df.iloc[:, -1].apply(lambda x: x.strip() == '' or pd.isna(x))].index
-            if len(empty_ending_rows) > 0:
-                non_empty_ending_rows = df[~df.index.isin(empty_ending_rows)]
-                merge_rows_selection = st.multiselect("Wählen Sie die Zeilen zum Zusammenführen für die ausgewählten Spalten:", list(non_empty_ending_rows.index))
-                for col in merge_columns:
-                    merged_column_name = df.columns[col]
-                    merged_values = df.loc[merge_rows_selection, col].apply(lambda x: merge_separator.join(x), axis=1)
-                    df.loc[merge_rows_selection, merged_column_name] = merged_values
-                    df.drop(columns=col, inplace=True)
+            none_count = len(df[df.iloc[:, -1] == 'None'])
 
         space_removal_counts = {}
         foreign_characters_removed = {}
@@ -65,10 +54,10 @@ def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, me
         df.fillna('', inplace=True)
         df.replace('nan', None, inplace=True)
 
-        return original_df, df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding
+        return original_df, df, none_count, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding
     except Exception as e:
         st.error(f"Ein Fehler ist aufgetreten: {e}")
-        return None, None, None, None, None, None
+        return None, None, None, None, None, None, None
 
 def statistical_analysis(df):
     desc = df.describe()
@@ -92,11 +81,9 @@ try:
 except ValueError:
     st.error("Bitte geben Sie eine gültige Zahl ein.")
 remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", ['All Columns'] + column_range, default=[])
-merge_columns_selection = st.multiselect("Wählen Sie zwei oder mehr Spalten zum Zusammenführen aus:", column_range, default=[])
-merge_separator = st.text_input("Geben Sie den Trennzeichen für das Zusammenführen der Spalten ein:", ",")
 
 if input_file and delimiter:
-    original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, merge_columns_selection, merge_separator, remove_empty_or_space_columns, correct_misinterpretation)
+    original_df, cleaned_df, none_count, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, remove_empty_or_space_columns, correct_misinterpretation)
     if original_df is not None and cleaned_df is not None:
         st.write("### Vorschau der Originaldaten")
         st.dataframe(original_df)
@@ -110,6 +97,7 @@ if input_file and delimiter:
             st.write(f"Bereinigte Zeilen: {len(cleaned_df)}, Bereinigte Spalten: {cleaned_df.shape[1]}")
             for col, count in space_removal_counts.items():
                 st.write(f"Leerzeichen entfernt in Spalte '{col}': {count}")
+            st.write(f"Anzahl der Zeilen mit 'None' am Ende: {none_count}")
             st.write(f"Entfernte fremde Zeichen: {', '.join(total_foreign_characters_removed)}")
             for col, chars in foreign_characters_removed.items():
                 if chars:
