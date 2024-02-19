@@ -18,74 +18,116 @@ def remove_foreign_characters(value):
     new_value = pattern.sub('', value)
     return new_value, ''.join(set(removed_chars))
 
-def process_file(input_file, delimiter, remove_spaces_columns, normal_merge_columns, normal_merge_separator, merge_columns, merge_separator, remove_empty_or_space_columns, correct_misinterpretation):
+def is_email_like(value):
+    pattern = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z9.-]+\.[A-Z|a-z]{2,}\b')
+    return bool(pattern.match(value))
+
+def process_file(input_file, delimiter, remove_spaces_columns, merge_columns, merge_separator, remove_empty_or_space_columns, correct_misinterpretation):
     content = input_file.getvalue()
     encoding, content = detect_encoding(content)
     try:
         decoded_content = content.decode(encoding)
-        df = pd.read_csv(io.StringIO(decoded_content), sep=delimiter, header=None, dtype=str)
+        original_df = pd.read_csv(io.StringIO(decoded_content), sep=delimiter, header=None)
 
         if remove_empty_or_space_columns:
-            df.replace('', pd.NA, inplace=True)
-            df.dropna(axis=1, how='all', inplace=True)
-            df.replace(pd.NA, '', inplace=True)
+            original_df.replace('', pd.NA, inplace=True)
+            original_df.dropna(axis=1, how='all', inplace=True)
+            original_df.replace(pd.NA, '', inplace=True)
 
-        # Normal Merging of two columns
-        if normal_merge_columns and len(normal_merge_columns) == 2:
-            col1, col2 = [int(c) - 1 for c in normal_merge_columns]  # Adjusted for 0-based index
-            df[f'Merged_Normal_{col1}_{col2}'] = df.iloc[:, col1] + normal_merge_separator + df.iloc[:, col2]
-            df.drop(columns=[df.columns[col1], df.columns[col2]], inplace=True)
+        original_df = original_df.astype(str)
+        df = original_df.copy()
 
-        # Handle space and foreign character removal here, as per previous logic
+        if correct_misinterpretation:
+            empty_ending_rows = df[df.iloc[:, -1].apply(lambda x: x.strip() == '' or pd.isna(x))].index
+            if len(empty_ending_rows) > 0:
+                non_empty_ending_rows = df[~df.index.isin(empty_ending_rows)]
+                merge_rows_selection = st.multiselect("Wählen Sie die Zeilen zum Zusammenführen für die ausgewählten Spalten:", list(non_empty_ending_rows.index))
+                merge_columns = [col - 1 for col in merge_columns]  # Adjust index
+                merged_column_name = df.columns[min(merge_columns)]
+                merged_values = df.loc[non_empty_ending_rows.index, merge_columns].apply(lambda x: merge_separator.join(x), axis=1)
+                df.loc[non_empty_ending_rows.index, merged_column_name] = merged_values
+                df.drop(columns=[df.columns[i] for i in merge_columns if i != min(merge_columns)], inplace=True)
 
-        # Conditional Merging based on "Korrekte Fehlinterpretation"
-        if correct_misinterpretation and merge_columns and len(merge_columns) >= 2:
-            # This example assumes merge_columns is a list of columns selected for merging.
-            merge_col_indices = [int(c) - 1 for c in merge_columns]  # Adjust if using names or other identifiers
-            for index, row in df.iterrows():
-                if row.iloc[-1].strip() in ('', 'None', 'nan'):
-                    merged_value = merge_separator.join(row[merge_col_indices].astype(str))
-                    df.at[index, merge_col_indices[0]] = merged_value
-            df.drop(columns=df.columns[merge_col_indices[1:]], inplace=True)
+        space_removal_counts = {}
+        foreign_characters_removed = {}
+        total_foreign_characters_removed = set()
 
-        space_removal_counts = {}  # Implement space removal logic if required
-        foreign_characters_removed = {}  # Implement foreign character removal logic if required
-        total_foreign_characters_removed = set()  # Implement tracking of removed foreign characters if required
+        for col in df.columns:
+            original_col = df[col].copy()
+            if col in remove_spaces_columns or 'All Columns' in remove_spaces_columns:
+                df[col] = df[col].str.replace('\s+', '', regex=True)
+                space_removal_counts[col] = (original_col.str.len() - df[col].str.len()).sum()
 
-        return df, encoding, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed
+            df[col], removed_chars = zip(*df[col].apply(remove_foreign_characters))
+            foreign_characters_removed[col] = ''.join(set().union(*removed_chars))
+            total_foreign_characters_removed.update(foreign_characters_removed[col])
+
+        df.fillna('', inplace=True)
+        df.replace('nan', None, inplace=True)
+
+        return original_df, df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding
     except Exception as e:
         st.error(f"Ein Fehler ist aufgetreten: {e}")
-        return None, None, None, None, None
+        return None, None, None, None, None, None
+
+def statistical_analysis(df):
+    desc = df.describe()
+    skewness = df.skew()
+    kurt = df.kurtosis()
+    Q1 = df.quantile(0.25)
+    Q3 = df.quantile(0.75)
+    IQR = Q3 - Q1
+    outliers = ((df < (Q1 - 1.5 * IQR)) | (df > (Q3 + 1.5 * IQR))).sum()
+    return desc, skewness, kurt, outliers
 
 st.title("CSV- und TXT-Datei bereinigen und analysieren")
-
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
 delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
 remove_empty_or_space_columns = st.checkbox("Spalten entfernen, wenn alle Werte Leerzeichen oder None sind")
 correct_misinterpretation = st.checkbox("Korrekte Fehlinterpretationen")
-
-# Normal Merge UI Components
-normal_merge_columns_selection = st.text_input("Normal Merge Columns (e.g., '1,2'):", "")
-normal_merge_separator = st.text_input("Separator for normal merging:", ",")
-
-# Conditional Merge UI Components
-merge_columns_selection = st.text_input("Conditional Merge Columns (e.g., '3,4') for 'Korrekte Fehlinterpretation':", "")
-merge_separator = st.text_input("Separator for conditional merging:", ",")
-
-# Convert user input for column selection into list format
-normal_merge_columns = [x.strip() for x in normal_merge_columns_selection.split(',') if x.strip().isdigit()]
-merge_columns = [x.strip() for x in merge_columns_selection.split(',') if x.strip().isdigit()]
+column_options = "100"
+try:
+    max_columns = int(column_options)
+    column_range = list(range(max_columns))
+except ValueError:
+    st.error("Bitte geben Sie eine gültige Zahl ein.")
+remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", ['All Columns'] + column_range, default=[])
+merge_columns_selection = st.multiselect("Wählen Sie zwei oder mehr Spalten zum Zusammenführen aus:", column_range, default=[])
+merge_separator = st.text_input("Geben Sie den Trennzeichen für das Zusammenführen der Spalten ein:", ",")
 
 if input_file and delimiter:
-    processed_df, encoding, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed = process_file(
-        input_file, delimiter, [], normal_merge_columns, normal_merge_separator, merge_columns, merge_separator, remove_empty_or_space_columns, correct_misinterpretation
-    )
-    if processed_df is not None:
+    original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, merge_columns_selection, merge_separator, remove_empty_or_space_columns, correct_misinterpretation)
+    if original_df is not None and cleaned_df is not None:
+        st.write("### Vorschau der Originaldaten")
+        st.dataframe(original_df)
         st.write("### Vorschau der bereinigten Daten")
-        st.dataframe(processed_df)
-
-        # Download cleaned data
+        st.dataframe(cleaned_df)
+        
+        with st.expander("Analyse", expanded=False):
+            st.write("#### Datenbereinigungsanalyse")
+            st.write(f"Dateikodierung: {encoding}")
+            st.write(f"Ursprüngliche Zeilen: {len(original_df)}, Ursprüngliche Spalten: {original_df.shape[1]}")
+            st.write(f"Bereinigte Zeilen: {len(cleaned_df)}, Bereinigte Spalten: {cleaned_df.shape[1]}")
+            for col, count in space_removal_counts.items():
+                st.write(f"Leerzeichen entfernt in Spalte '{col}': {count}")
+            st.write(f"Entfernte fremde Zeichen: {', '.join(total_foreign_characters_removed)}")
+            for col, chars in foreign_characters_removed.items():
+                if chars:
+                    st.write(f"Spalte '{col}' entfernte Zeichen: {chars}")
+            
+            # Statistical Summary for numerical data
+            if not cleaned_df.select_dtypes(include=np.number).empty:
+                st.write("### Erweiterte statistische Analyse für numerische Daten")
+                desc, skewness, kurt, outliers = statistical_analysis(cleaned_df.select_dtypes(include=[np.number]))
+                st.dataframe(desc)
+                st.write("### Schiefe (Skewness)")
+                st.dataframe(skewness)
+                st.write("### Wölbung (Kurtosis)")
+                st.dataframe(kurt)
+                st.write("### Ausreißer (Outliers)")
+                st.dataframe(outliers)
         cleaned_csv_buffer = io.StringIO()
-        processed_df.to_csv(cleaned_csv_buffer, index=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8-sig')
+        cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8-sig')
         cleaned_csv_data = cleaned_csv_buffer.getvalue()
-        st.download_button("Bereinigte Daten herunterladen", data=cleaned_csv_data.encode('utf-8-sig'), file_name="bereinigte_daten.csv", mime="text/csv")
+        cleaned_csv_buffer.seek(0)
+        st.download_button("Bereinigte Daten herunterladen", data=cleaned_csv_data.encode('utf-8-sig'), file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
