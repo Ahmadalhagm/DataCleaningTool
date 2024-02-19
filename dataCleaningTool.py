@@ -73,9 +73,10 @@ st.title("CSV- und TXT-Datei bereinigen und analysieren")
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
 delimiter = st.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
 remove_empty_or_space_columns = st.checkbox("Spalten entfernen, wenn alle Werte Leerzeichen oder None sind")
+remove_spaces_columns = st.multiselect("Wählen Sie die Spalten aus, aus denen Sie alle Leerzeichen entfernen möchten:", ['All Columns'] + column_range, default=[])
 
 if input_file and delimiter:
-    original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_empty_or_space_columns)
+    original_df, cleaned_df, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding = process_file(input_file, delimiter, remove_spaces_columns, remove_empty_or_space_columns)
     if original_df is not None and cleaned_df is not None:
         st.write("### Vorschau der Originaldaten")
         st.dataframe(original_df)
@@ -106,15 +107,9 @@ if input_file and delimiter:
                 st.write("### Ausreißer (Outliers)")
                 st.dataframe(outliers)
 
-        if st.button("Zusammenführen"):
+        if st.checkbox("Merging"):
             merge_column = st.selectbox("Wählen Sie die Spalte zum Zusammenführen:", cleaned_df.columns)
             merge_rows = st.multiselect("Wählen Sie die Zeilen zum Zusammenführen aus:", cleaned_df.index)
-            if merge_column and merge_rows:
-                merged_values = merge_values(cleaned_df, merge_column, merge_rows)
-                st.write("Zusammengeführte Werte:", merged_values)
-
-        cleaned_csv_buffer = io.StringIO()
-        cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding='utf-8-sig')
-        cleaned_csv_data = cleaned_csv_buffer.getvalue()
-        cleaned_csv_buffer.seek(0)
-        st.download_button("Bereinigte Daten herunterladen", data=cleaned_csv_data.encode('utf-8-sig'), file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
+            if st.button("Merge Values"):
+                merged_value = merge_values(cleaned_df, merge_column, merge_rows)
+                st.write(f"Merged Value: {merged_value}")
