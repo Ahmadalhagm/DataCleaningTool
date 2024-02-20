@@ -22,7 +22,7 @@ def process_file(input_file, delimiter, remove_empty_or_space_columns):
     encoding, content = detect_encoding(content)
     try:
         decoded_content = content.decode(encoding)
-        original_df = pd.read_csv(io.StringIO(decoded_content), sep=delimiter, header=None)
+        original_df = pd.read_csv(io.StringIO(decoded_content), sep=delimiter, header=None, encoding='utf-8-sig')
 
         original_df.replace('', pd.NA, inplace=True)
         original_df.dropna(axis=1, how='all', inplace=True)
