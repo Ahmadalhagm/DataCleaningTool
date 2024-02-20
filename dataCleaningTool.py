@@ -3,6 +3,8 @@ import pandas as pd
 import chardet
 import io
 import re
+import csv
+import os
 
 def detect_encoding(file_content):
     result = chardet.detect(file_content)
@@ -82,10 +84,6 @@ def shift_values_left(selected_column, df):
             df.iloc[:, -1] = None  
     return df
 
-def change_encoding(df, new_encoding):
-    encoded_df = df.applymap(lambda x: x.encode(new_encoding, errors='ignore').decode(new_encoding))
-    return encoded_df
-
 def statistical_analysis(original_df, cleaned_df, placeholder_count, nan_at_end_count, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding):
     stats_info = {
         "Encoding": encoding,
@@ -105,7 +103,9 @@ st.sidebar.title("Optionen")
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
 delimiter = st.sidebar.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
 remove_empty_or_space_columns = st.sidebar.checkbox("Spalten entfernen, wenn alle Werte Leerzeichen oder None sind")
-new_encoding = st.sidebar.selectbox("Wählen Sie die neue Kodierung für die Ausgabedatei aus:", ['utf-8', 'latin-1', 'utf-16', 'utf-32'])
+
+# Encoding Option
+new_encoding = st.sidebar.selectbox("Wählen Sie die neue Kodierung für die Ausgabedatei aus:", ['utf-8-sig', 'latin-1', 'utf-16', 'utf-32'])
 
 # Analysis Section
 if input_file and delimiter:
@@ -123,6 +123,8 @@ if input_file and delimiter:
                 cleaned_df = merge_columns(cleaned_df, merge_columns_selection)
                 st.write("### Bereinigte Daten nach Zusammenführen der Spalten")
                 st.dataframe(cleaned_df)
+        else:
+            st.warning("Bitte wählen Sie mindestens zwei Spalten zum Zusammenführen aus.")
         
         # Shift Values Section
         shift_column = st.selectbox("Wählen Sie eine Spalte aus, bis zu der alle Werte verschoben werden sollen:", original_df.columns.tolist())
@@ -150,10 +152,14 @@ if input_file and delimiter:
                 stats_info = statistical_analysis(original_df, cleaned_df, placeholder_count, nan_at_end_count, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding)
                 st.write("#### Weitere Informationen")
                 st.write(stats_info)
-        
-        download_btn = st.download_button(
-            label="Bereinigte Daten herunterladen",
-            data=cleaned_df.to_csv(sep=delimiter, encoding=new_encoding, index=False).encode(),
-            file_name=input_file.name.replace(' ', '_') if input_file.name else 'cleaned_data.csv',
-            mime='text/csv'
-        )
+
+        # Write the cleaned DataFrame to a CSV file
+        cleaned_csv_buffer = io.StringIO()
+        cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding=new_encoding)  # Specify the selected encoding
+
+        # Prepare the cleaned CSV data
+        cleaned_csv_data = cleaned_csv_buffer.getvalue()
+        cleaned_csv_buffer.seek(0)
+
+        # Provide the cleaned CSV file for download
+        st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv_data.encode(new_encoding), file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
