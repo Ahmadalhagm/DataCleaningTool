@@ -103,9 +103,9 @@ st.sidebar.title("Optionen")
 input_file = st.file_uploader("Laden Sie Ihre CSV- oder TXT-Datei hoch:", type=["csv", "txt"])
 delimiter = st.sidebar.text_input("Geben Sie das Trennzeichen Ihrer Datei ein:", ";")
 remove_empty_or_space_columns = st.sidebar.checkbox("Spalten entfernen, wenn alle Werte Leerzeichen oder None sind")
+change_output_encoding = st.sidebar.checkbox("Ändern Sie die Kodierung der Ausgabedatei")
 
-# Encoding Option
-new_encoding = st.sidebar.selectbox("Wählen Sie die neue Kodierung für die Ausgabedatei aus:", ['utf-8-sig', 'latin-1', 'utf-16', 'utf-32'])
+new_encoding = 'utf-8-sig'  # Default encoding for output file
 
 # Analysis Section
 if input_file and delimiter:
@@ -152,14 +152,10 @@ if input_file and delimiter:
                 stats_info = statistical_analysis(original_df, cleaned_df, placeholder_count, nan_at_end_count, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding)
                 st.write("#### Weitere Informationen")
                 st.write(stats_info)
-
-        # Write the cleaned DataFrame to a CSV file
+        
+        # Download Button for Cleaned Data
         cleaned_csv_buffer = io.StringIO()
-        cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding=new_encoding)  # Specify the selected encoding
-
-        # Prepare the cleaned CSV data
+        cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding=new_encoding)  # Specify UTF-8 with BOM encoding
         cleaned_csv_data = cleaned_csv_buffer.getvalue()
         cleaned_csv_buffer.seek(0)
-
-        # Provide the cleaned CSV file for download
         st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv_data.encode(new_encoding), file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
