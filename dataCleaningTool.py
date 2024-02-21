@@ -78,12 +78,13 @@ def shift_values_left(selected_column, df):
         selected_column_index = df.columns.get_loc(selected_column)
         if selected_column_index < len(df.columns) - 1:
             for i in range(len(df) - 1):
-                if df.iloc[i, -1] in [None, 'nan', '']:
+                if df.iloc[i, -1] not in [None, 'nan', '']:
                     df.iloc[i, selected_column_index] += df.iloc[i, selected_column_index + 1]
                     for j in range(selected_column_index + 1, len(df.columns) - 1):
                         df.iloc[i, j] = df.iloc[i, j + 1]
-            df.iloc[:, -1] = None  
+                    df.iloc[i, -1] = None
     return df
+
 
 def statistical_analysis(original_df, cleaned_df, placeholder_count, nan_at_end_count, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding):
     stats_info = {
