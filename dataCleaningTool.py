@@ -77,14 +77,11 @@ def shift_values_left(selected_column, df):
     if selected_column in df.columns:
         selected_column_index = df.columns.get_loc(selected_column)
         if selected_column_index > 0:
-            # Identify rows with values at the end in the input DataFrame
-            rows_with_values_at_end = df.apply(lambda row: row.iloc[-1] not in [None, 'nan', ''], axis=1)
-            # Merge values from columns after the selected column with the selected column for rows with values at the end
-            df.loc[rows_with_values_at_end, selected_column] = df.loc[rows_with_values_at_end, selected_column] + ', ' + df.loc[rows_with_values_at_end, selected_column_index + 1]
-            # Shift values to the left for columns before the selected column for rows with values at the end
-            for i in range(selected_column_index + 1, len(df.columns) - 1):
-                df.loc[rows_with_values_at_end, df.columns[i]] = df.loc[rows_with_values_at_end, df.columns[i+1]]
-            df.iloc[:, -1] = None  # Set the last column to None for rows with values at the end
+            for i in range(len(df) - 1):
+                if df.iloc[i, selected_column_index] not in [None, 'nan', '']:
+                    df.iloc[i, selected_column_index - 1] = df.iloc[i, selected_column_index]
+                    df.iloc[i, selected_column_index] = df.iloc[i, selected_column_index + 1]
+            df.iloc[:, -1] = None  
     return df
 
 def statistical_analysis(original_df, cleaned_df, placeholder_count, nan_at_end_count, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding):
