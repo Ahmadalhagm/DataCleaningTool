@@ -76,14 +76,14 @@ def remove_spaces(selected_columns, df):
 def shift_values_left(selected_column, df):
     if selected_column in df.columns:
         selected_column_index = df.columns.get_loc(selected_column)
-        if selected_column_index > 0:
+        if selected_column_index < len(df.columns) - 1:
             for i in range(len(df) - 1):
                 if df.iloc[i, selected_column_index] not in [None, 'nan', '']:
-                    df.iloc[i, selected_column_index - 1] = df.iloc[i, selected_column_index]
-                    df.iloc[i, selected_column_index] = df.iloc[i, selected_column_index + 1]
+                    df.iloc[i, selected_column_index + 1] = df.iloc[i, selected_column_index]
+                    for j in range(selected_column_index, len(df.columns) - 1):
+                        df.iloc[i, j] = df.iloc[i, j + 1]
             df.iloc[:, -1] = None  
     return df
-
 def statistical_analysis(original_df, cleaned_df, placeholder_count, nan_at_end_count, space_removal_counts, foreign_characters_removed, total_foreign_characters_removed, encoding):
     stats_info = {
         "Encoding": encoding,
