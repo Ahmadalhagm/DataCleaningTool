@@ -161,3 +161,4 @@ if input_file and delimiter:
         cleaned_csv_data = cleaned_csv_buffer.getvalue()
         cleaned_csv_buffer.seek(0)
         st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv_data.encode(new_encoding), file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
+
