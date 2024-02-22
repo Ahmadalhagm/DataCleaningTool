@@ -12,7 +12,7 @@ def detect_encoding(file_content):
     return encoding, file_content
 
 def remove_foreign_characters(value):
-    pattern = re.compile(r'[^\w\s.,;@#\-äöüÄÖÜß]+')
+    pattern = re.compile(r'[^\w\s.,;@#\|-äöüÄÖÜß]+')
     removed_chars = pattern.findall(value)
     new_value = pattern.sub('', value)
     return new_value, ''.join(set(removed_chars))
