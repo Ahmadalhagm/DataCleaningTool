@@ -12,7 +12,7 @@ def detect_encoding(file_content):
     return encoding, file_content
 
 def remove_foreign_characters(value):
-    pattern = re.compile(r'[^\w\s.,;@#\-_äöüÄÖÜß&]+')
+    pattern = re.compile(r'[^\w\s.,;@#\-äöüÄÖÜß]+')
     removed_chars = pattern.findall(value)
     new_value = pattern.sub('', value)
     return new_value, ''.join(set(removed_chars))
@@ -157,7 +157,7 @@ if input_file and delimiter:
         
         # Download Button for Cleaned Data
         cleaned_csv_buffer = io.StringIO()
-        original_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding=new_encoding)  # Specify UTF-8 with BOM encoding
+        cleaned_df.to_csv(cleaned_csv_buffer, index=False, header=False, sep=delimiter, quoting=csv.QUOTE_NONNUMERIC, encoding=new_encoding)  # Specify UTF-8 with BOM encoding
         cleaned_csv_data = cleaned_csv_buffer.getvalue()
         cleaned_csv_buffer.seek(0)
         st.download_button(label="Bereinigte Daten herunterladen", data=cleaned_csv_data.encode(new_encoding), file_name=os.path.splitext(input_file.name)[0] + "_bereinigt.csv", mime="text/csv")
